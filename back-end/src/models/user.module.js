@@ -12,6 +12,8 @@ import bcrypt from 'bcrypt'
 //   }
 // }
 
+const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
+
 export const loginUserModel = async (username, password) => {
   try {
     const [[user]] = await db.query('SELECT id, username, password FROM USER WHERE USERNAME = ?',
@@ -38,9 +40,9 @@ export const registerUserModel = async (username, password) => {
       [username])
 
     if (user) throw new Error('User already exist')
-    console.log('salt => ', SALT_ROUNDS)
+
     const id = crypto.randomUUID()
-    const hashedPassword = bcrypt.hashSync(password, SALT_ROUNDS)
+    const hashedPassword = bcrypt.hashSync(password, salty)
 
     const userInserted = await db.query('INSERT INTO USER (ID, USERNAME, PASSWORD) VALUES (?, ?, ?)',
       [id, username, hashedPassword]
