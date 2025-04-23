@@ -22,6 +22,7 @@ export const refreshToken = async (req, res) => {
         maxAge: 1000 * 60 * 10 // 10 minutes
       }).send({ message: 'Token refreshed successfully' })
   } catch (error) {
+    console.error('Error in refreshToken::: ', error)
     res.status(400).send({ message: 'Error refreshing token' })
   }
 }

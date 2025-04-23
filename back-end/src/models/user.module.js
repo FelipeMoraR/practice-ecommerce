@@ -1,22 +1,13 @@
 import { SALT_ROUNDS } from '../config/config.js'
 import { db } from '../config/db.config.js'
 import bcrypt from 'bcrypt'
-
-// export const testBd = async () => {
-//   try {
-//     const [rows] = await db.execute('SELECT * FROM test') // If you use only rows without the brackets you will recibe the metadata of the query as other array [rows, fields]
-//     return rows
-//   } catch (error) {
-//     console.log('Error in testBd', error)
-//     throw error
-//   }
-// }
+import { UserExistError } from '../utils/customErrors.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 export const loginUserModel = async (username, password) => {
   try {
-    const [[user]] = await db.query('SELECT id, username, password FROM USER WHERE USERNAME = ?',
+    const [[user]] = await db.query('SELECT id, username, password FROM USER WHERE USERNAME = ?', // NOTE If you use only rows without the brackets you will recibe the metadata of the query as other array [rows, fields]
       [username])
 
     if (!user) throw new Error('User not founded')
@@ -29,7 +20,7 @@ export const loginUserModel = async (username, password) => {
       username: user.username
     }
   } catch (error) {
-    console.error('Error in login', error)
+    console.error('Error in loginUserModel::: ', error)
     throw error
   }
 }
@@ -39,7 +30,7 @@ export const registerUserModel = async (username, password) => {
     const [[user]] = await db.query('SELECT id FROM USER WHERE USERNAME = ?',
       [username])
 
-    if (user) throw new Error('User already exist')
+    if (user) throw new UserExistError()
 
     const id = crypto.randomUUID()
     const hashedPassword = bcrypt.hashSync(password, salty)
@@ -48,13 +39,13 @@ export const registerUserModel = async (username, password) => {
       [id, username, hashedPassword]
     )
 
-    console.log('userInserted => ', userInserted)
+    console.log('registerUserModel: User inserted::: ', userInserted)
 
     return {
       id
     }
   } catch (error) {
-    console.error('Error user register', error)
+    console.error('Error in registerUserModel::: ', error)
     throw error
   }
 }

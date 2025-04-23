@@ -1,7 +1,7 @@
-// import { UserRepository } from '../../model/user-repository.js'
 import jwt from 'jsonwebtoken'
 import { JWT_SECRET, NODE_ENV } from '../config/config.js'
 import { loginUserModel, registerUserModel } from '../models/user.module.js'
+import { UserExistError } from '../utils/customErrors.js'
 
 export const loginUserController = async (req, res) => {
   const { username, password } = req.body
@@ -29,40 +29,46 @@ export const loginUserController = async (req, res) => {
         httpOnly: true,
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 1000 * 60 * 60 * 7 // 7 hours
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 hours
       })
       .send({ user })
   } catch (error) {
-    res.status(400).send({ error: error.message })
+    console.error('Error in loginUserController::: ', error)
+    res.status(500).send({ status: 500, error: 'Internal server error' })
   }
 }
 
-// This need be fixed
-export const registerUser = async (req, res) => {
+export const registerUserController = async (req, res) => {
   const { username, password } = req.body
 
   try {
     const id = await registerUserModel(username, password)
     res.status(200).send({ status: 200, message: 'User Created', id })
   } catch (error) {
-    // Dont send all the error.
-    res.status(500).send({ error: error.message })
+    // NOTE Dont send all the info of error.
+    console.error('Error in registerUserController::: ', error)
+
+    if (error instanceof UserExistError) return res.status(error.statusCode).send({ error: error.statusCode, message: error.message })
+
+    res.status(500).send({ status: 500, error: 'Internal server error' })
   }
 }
 
-export const logoutUser = async (req, res) => {
+export const logoutUserController = async (req, res) => {
   try {
     res
       .clearCookie('access_token')
       .clearCookie('refresh_token')
       .send({ message: 'Logout successful' })
   } catch (error) {
-    res.status(500).send({ error: error.message })
+    console.error('Error in logoutUserController::: ', error)
+    res.status(500).send({ status: 500, error: 'Internal server error' })
   }
 }
 
+// TODO Delete THIS in the future
 export const protectedRoute = (req, res) => {
-  // JWT ayuda con la seguridad en la interaccion entre 2 partes, se divide en 3 partes: header, payload y signature, permite autenticacion de estado.
+  // NOTE JWT ayuda con la seguridad en la interaccion entre 2 partes, se divide en 3 partes: header, payload y signature, permite autenticacion de estado.
   const token = req.cookies.access_token
 
   if (!token) return res.status(401).send('Access not authorized')
