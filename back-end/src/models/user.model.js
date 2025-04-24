@@ -1,7 +1,7 @@
 import { SALT_ROUNDS } from '../config/config.js'
 import { db } from '../config/db.config.js'
 import bcrypt from 'bcrypt'
-import { UserExistError } from '../utils/customErrors.js'
+import { UserExistError, LoginUserError, HttpError } from '../utils/customErrors.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
@@ -10,10 +10,10 @@ export const loginUserModel = async (username, password) => {
     const [[user]] = await db.query('SELECT id, username, password FROM USER WHERE USERNAME = ?', // NOTE If you use only rows without the brackets you will recibe the metadata of the query as other array [rows, fields]
       [username])
 
-    if (!user) throw new Error('User not founded')
+    if (!user) throw new LoginUserError('User not founded', 404)
 
     const passwordIsValid = bcrypt.compareSync(password, user.password)
-    if (!passwordIsValid) throw new Error('Invalid password') // Remember never send the password anywhere
+    if (!passwordIsValid) throw new LoginUserError('Invalid password', 401) // Remember never send the password anywhere
 
     return {
       id: user.id,
@@ -46,6 +46,25 @@ export const registerUserModel = async (username, password) => {
     }
   } catch (error) {
     console.error('Error in registerUserModel::: ', error)
+    throw error
+  }
+}
+
+export const getUserModel = async (idUser) => {
+  try {
+    const [[user]] = await db.query('SELECT id, username, password FROM USER WHERE ID = ?',
+      [idUser])
+
+    console.log('user in getUserModel => ', user)
+
+    if (!user) throw new HttpError('User not founded', 404)
+
+    return {
+      id: user.id,
+      username: user.username
+    }
+  } catch (error) {
+    console.error('Error in loginUserModel::: ', error)
     throw error
   }
 }

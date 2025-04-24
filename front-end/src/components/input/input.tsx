@@ -10,7 +10,6 @@ interface InputProps<T extends ZodTypeAny> {
 }
 
 const Input = <T extends ZodTypeAny>({name, control, label, type, error} : InputProps<T>) => {
-    console.log('error => ', error);
     return (
         <div>
             <label htmlFor = { name }>{ label }</label>

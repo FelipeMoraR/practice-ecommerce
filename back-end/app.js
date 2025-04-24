@@ -2,14 +2,32 @@ import express from 'express'
 import cookieParser from 'cookie-parser'
 import UserRouter from './src/routes/user.routes.js'
 import SessionRouter from './src/routes/session.routes.js'
+import cors from 'cors'
+import rateLimit from 'express-rate-limit'
+import helmet from 'helmet'
 
 const app = express()
-app.use(express.json()) // This allow the destructuration of the body of the request
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN,
+  credentials: true // NOTE to work with the cookies
+}
+const limiter = {
+  windowMs: parseInt(process.env.LIMITER_WINDOWMS, 10) * 1000, // 5 seconds
+  max: parseInt(process.env.LIMITER_MAX, 10),
+  message: 'Too many petitions, wait some seconds',
+  standardHeaders: true,
+  legacyHeaders: false
+}
+
+app.use(express.json({ limit: process.env.SIZE_LIMIT })) // NOTE This allow the destructuration of the body of the request
 app.use(cookieParser())
+app.use(cors(corsOptions))
+app.use(rateLimit(limiter)) // ANCHOR this limiter is per IP
+app.use(helmet()) // NOTE HTTP secured by adding the correct ones and hidding others
 
 // Custom Routes
 app.use('/api/users', UserRouter)
-app.use('/api/sessions/', SessionRouter)
+app.use('/api/sessions', SessionRouter)
 
 // Global middleware when they send invalid JSON, this has to be in the end because this capture all the errors and dont interfer with the other validations
 app.use((err, req, res, next) => {

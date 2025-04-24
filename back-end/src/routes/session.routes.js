@@ -1,10 +1,12 @@
 import express from 'express'
 import {
-  refreshToken
+  refreshTokenController,
+  getSessionInfoController
 } from '../controllers/session.controller.js'
 
 const SessionRouter = express.Router()
 
-SessionRouter.post('/refresh-token', refreshToken)
+SessionRouter.get('/refresh-token', refreshTokenController)
+SessionRouter.get('/get-session-info', getSessionInfoController)
 
 export default SessionRouter

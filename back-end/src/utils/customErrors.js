@@ -5,3 +5,18 @@ export class UserExistError extends Error {
     this.statusCode = 409 // NOTE Conflict
   }
 }
+
+export class LoginUserError extends Error {
+  constructor (message = 'Error in login user', statusCode = 409) {
+    super(message)
+    this.name = 'LoginUserError'
+    this.statusCode = statusCode
+  }
+}
+
+export class HttpError extends Error {
+  constructor (message, statusCode) {
+    super(message)
+    this.statusCode = statusCode
+  }
+}

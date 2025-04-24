@@ -1,24 +1,28 @@
 import jwt from 'jsonwebtoken'
 import { JWT_SECRET, NODE_ENV } from '../config/config.js'
-import { loginUserModel, registerUserModel } from '../models/user.module.js'
-import { UserExistError } from '../utils/customErrors.js'
+import { loginUserModel, registerUserModel } from '../models/user.model.js'
+import { UserExistError, LoginUserError } from '../utils/customErrors.js'
 
 export const loginUserController = async (req, res) => {
   const { username, password } = req.body
 
   try {
     const user = await loginUserModel(username, password)
-    const accessToken = jwt.sign({ id: user.id, user: user.username }, JWT_SECRET,
+    const accessToken = jwt.sign(
+      { id: user.id, username: user.username },
+      JWT_SECRET,
       {
         expiresIn: '10m'
       })
 
-    const refreshToken = jwt.sign({ id: user.id, user: user.username }, JWT_SECRET,
+    const refreshToken = jwt.sign(
+      { id: user.id },
+      JWT_SECRET,
       {
         expiresIn: '7d'
       })
 
-    res
+    return res
       .cookie('access_token', accessToken, {
         httpOnly: true,
         secure: NODE_ENV === 'production',
@@ -33,8 +37,9 @@ export const loginUserController = async (req, res) => {
       })
       .send({ user })
   } catch (error) {
-    console.error('Error in loginUserController::: ', error)
-    res.status(500).send({ status: 500, error: 'Internal server error' })
+    if (error instanceof LoginUserError) return res.status(error.statusCode).send({ error: error.statusCode, message: error.message })
+
+    return res.status(500).send({ status: 500, error: 'Internal server error' })
   }
 }
 
@@ -43,26 +48,26 @@ export const registerUserController = async (req, res) => {
 
   try {
     const id = await registerUserModel(username, password)
-    res.status(200).send({ status: 200, message: 'User Created', id })
+    return res.status(200).send({ status: 200, message: 'User Created', id })
   } catch (error) {
     // NOTE Dont send all the info of error.
     console.error('Error in registerUserController::: ', error)
 
     if (error instanceof UserExistError) return res.status(error.statusCode).send({ error: error.statusCode, message: error.message })
 
-    res.status(500).send({ status: 500, error: 'Internal server error' })
+    return res.status(500).send({ status: 500, error: 'Internal server error' })
   }
 }
 
-export const logoutUserController = async (req, res) => {
+export const logoutUserController = async (_, res) => {
   try {
-    res
+    return res
       .clearCookie('access_token')
       .clearCookie('refresh_token')
       .send({ message: 'Logout successful' })
   } catch (error) {
     console.error('Error in logoutUserController::: ', error)
-    res.status(500).send({ status: 500, error: 'Internal server error' })
+    return res.status(500).send({ status: 500, error: 'Internal server error' })
   }
 }
 
@@ -75,7 +80,7 @@ export const protectedRoute = (req, res) => {
 
   try {
     const data = jwt.verify(token, JWT_SECRET)
-    res.status(200).send({ status: 200, data })
+    return res.status(200).send({ status: 200, data })
   } catch (error) {
     return res.status(500).send('Internal server error')
   }
