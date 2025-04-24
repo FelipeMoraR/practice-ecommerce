@@ -1,60 +1,45 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Controller, SubmitHandler, useForm, Path } from "react-hook-form";
+import { SubmitHandler, useForm, Path } from "react-hook-form";
 import { ZodTypeAny, z } from "zod";
+import Input from "../input/input.tsx";
 
 type Mode = "onBlur" | "onChange" | "onSubmit" | "onTouched" | "all" | undefined
+
+interface InputProps {
+    name: string;
+    label: string;
+    type: string;
+}
 
 interface FormProps<T extends ZodTypeAny> {
     schema: T;
     mode: Mode;
-    defaultValues: z.infer<T>; // NOTE This create the object type by the schema 
+    defaultValues: z.infer<T>; // NOTE This create the object type by the schema
+    onSubmit: SubmitHandler<z.infer<T>>; 
+    fields: InputProps[];
 }
 
-const Form = <T extends ZodTypeAny>({ schema, mode, defaultValues }: FormProps<T>) => { // ANCHOR T is a generic to which the schema gives structure
+const Form = <T extends ZodTypeAny>({ schema, mode, defaultValues, onSubmit, fields }: FormProps<T>) => { // ANCHOR T is a generic to which the schema gives structure
     const { control, handleSubmit, formState: { errors } } = useForm<z.infer<T>>({ // NOTE handleSubmit controll the submit of the form in base of the schema
         resolver: zodResolver(schema),
         mode: mode,
         defaultValues: defaultValues
     })
 
-    const onSubmit: SubmitHandler<z.infer<T>> = (data) => {
-        console.log('info data => ', data)
-    }
-
     return (
         <form onSubmit = { handleSubmit(onSubmit) }>
-            <div>
-                <label htmlFor={'username'}>{'test username'}</label>
-                <Controller //Controlled by the form
-                    name={'username' as Path<z.infer<T>>}
-                    control={control}
-                    render={({ field }) => (
-                        <input
-                            id = {'username'}
-                            type = {'text'}
-                            {...field} // NOTE  spread operator, this give all the necesary configuration of the input to work with the form
-                        />
-                    )}
-                />
-                
-            </div>
-
-            <div>
-                <label htmlFor={'password'}>{'test password'}</label>
-                <Controller //Controlled by the form
-                    name={'password' as Path<z.infer<T>>}
-                    control={control}
-                    render={({ field }) => (
-                        <input
-                            id = {'password'}
-                            type = {'text'}
-                            {...field}
-                        />
-                    )}
-                />
-            </div>
-
-            {errors && <p>{JSON.stringify(errors)}</p>}
+            {
+                fields.map((element: InputProps, index: number) => (
+                    <Input
+                        key = {index}
+                        name = {element.name as Path<z.infer<T>>}
+                        control = {control}
+                        label = {element.label}
+                        type = {element.type}
+                        error = {errors[element.name]}
+                    />
+                ))
+            }
 
             <button type = "submit">Submit</button>
         </form>
