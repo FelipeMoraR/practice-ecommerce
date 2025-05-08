@@ -1,7 +1,10 @@
 import jwt from 'jsonwebtoken'
 import { JWT_SECRET, NODE_ENV } from '../config/config.js'
-import { loginUserModel, registerUserModel } from '../models/user.model.js'
 import { UserExistError, LoginUserError } from '../utils/customErrors.js'
+
+const loginUserModel = async (username, password) => {
+  
+}
 
 export const loginUserController = async (req, res) => {
   const { username, password } = req.body
