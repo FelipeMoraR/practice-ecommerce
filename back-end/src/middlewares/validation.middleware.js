@@ -8,10 +8,10 @@ export const validateSquema = (schema) => {
       if (!result.success) {
         const errors = result.error.errors
         const formatedErrors = errors.map(error => {
-          if (error.message) return error.message
+          if (error.message && error.path) return { name: error.path[0], message: error.message }
 
           return null
-        }).sort((a, b) => a.localeCompare(b))
+        })
 
         return res.status(400).send({ error: 'Invalid request', details: formatedErrors })
       }

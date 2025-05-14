@@ -1,11 +1,30 @@
 import { z } from 'zod'
 import { regexUsername, regexPassword, regexAtLeastOneNumber, regexAtLeastOneSpecialCharacter, regexAtleastOneLetter } from '../utils/regex.js'
 
+const blockedDomains = [
+  'mailinator.com',
+  'yopmail.com',
+  '10minutemail.com',
+  'guerrillamail.com',
+  'maildrop.cc',
+  'mailnesia.com',
+  'getnada.com',
+  'throwawaymail.com',
+  'temp-mail.io'
+]
+
 export const loginSchema = z.object({
-  username: z.string().min(1, 'Username is required').min(4, 'Min length Username 4').max(10, 'Max length Username 10'),
+  email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250'),
   password: z.string().min(1, 'Password is required')
+}).refine((data) => {
+  const emailDomain = data.email.split('@')[1]?.toLowerCase()
+  return emailDomain && !blockedDomains.includes(emailDomain)
+}, {
+  message: 'Email domain not allowed',
+  path: ['email']
 })
 
+// TODO update this.
 export const registerSchema = z.object({
   username: z.string().min(1, 'Username is required').min(4, 'Min length Username 4').max(10, 'Max length Username 10'),
   password: z.string().min(1, 'Password is required').length(9, 'Password must have 9 characters')

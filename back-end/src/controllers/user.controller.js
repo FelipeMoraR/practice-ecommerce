@@ -1,16 +1,24 @@
 import jwt from 'jsonwebtoken'
-import { JWT_SECRET, NODE_ENV } from '../config/config.js'
-import { UserExistError, LoginUserError } from '../utils/customErrors.js'
+import { JWT_SECRET, NODE_ENV, SALT_ROUNDS } from '../config/config.js'
+import bcrypt from 'bcrypt'
+import { HttpError } from '../utils/customErrors.js'
+import User from '../models/user.model.js'
 
-const loginUserModel = async (username, password) => {
-  
-}
+const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 export const loginUserController = async (req, res) => {
-  const { username, password } = req.body
-
   try {
-    const user = await loginUserModel(username, password)
+    const { email, password } = req.body
+
+    const user = await User.findOne({ where: { email } })
+    console.log('loginUserController user founded::: ', user)
+
+    if (!user) throw new HttpError('Email not founded', 404)
+
+    const passwordIsValid = bcrypt.compareSync(password, user.password)
+
+    if (!passwordIsValid) throw new HttpError('Invalid password', 401)
+
     const accessToken = jwt.sign(
       { id: user.id, username: user.username },
       JWT_SECRET,
@@ -38,27 +46,39 @@ export const loginUserController = async (req, res) => {
         sameSite: 'strict',
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 hours
       })
-      .send({ user })
+      .send({ status: 200, message: 'User logged!!!' })
   } catch (error) {
-    if (error instanceof LoginUserError) return res.status(error.statusCode).send({ error: error.statusCode, message: error.message })
+    console.log('Error in loginUserController::: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
 
-    return res.status(500).send({ status: 500, error: 'Internal server error' })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const registerUserController = async (req, res) => {
-  const { username, password } = req.body
-
   try {
-    const id = await registerUserModel(username, password)
-    return res.status(200).send({ status: 200, message: 'User Created', id })
+    const { email, password, name, lastname } = req.body
+
+    const userExist = await User.findOne({ where: { email } }) // TODO verify if we can resctrict the return information
+
+    console.log('registerUserController userExist::: ', userExist)
+
+    if (userExist) throw new HttpError('User already exist', 409)
+
+    const id = crypto.randomUUID()
+    const hashedPassword = bcrypt.hashSync(password, salty)
+
+    const userInserted = await User.create({ id, email, password: hashedPassword, name, lastname })
+    console.log('registerUserController userInserted::: ', userInserted)
+
+    return res.status(200).send({ status: 200, message: 'User Created!!!' })
   } catch (error) {
     // NOTE Dont send all the info of error.
     console.error('Error in registerUserController::: ', error)
 
-    if (error instanceof UserExistError) return res.status(error.statusCode).send({ error: error.statusCode, message: error.message })
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
 
-    return res.status(500).send({ status: 500, error: 'Internal server error' })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
@@ -70,7 +90,7 @@ export const logoutUserController = async (_, res) => {
       .send({ message: 'Logout successful' })
   } catch (error) {
     console.error('Error in logoutUserController::: ', error)
-    return res.status(500).send({ status: 500, error: 'Internal server error' })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 

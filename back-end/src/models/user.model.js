@@ -7,7 +7,7 @@ const User = sqDb.define('user', {
     primaryKey: true
   },
   email: {
-    type: DataTypes.STRING(320),
+    type: DataTypes.STRING(250),
     allowNull: false
   },
   password: {
