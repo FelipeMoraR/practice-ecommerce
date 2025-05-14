@@ -1,4 +1,11 @@
 import { Sequelize } from 'sequelize'
+import { createNamespace } from 'cls-hooked'
+
+console.log(process.env.DB_NAMESPACE)
+
+const nameSpace = createNamespace(process.env.DB_NAMESPACE || 'test')
+
+Sequelize.useCLS(nameSpace)
 
 export const sqDb = new Sequelize(
   process.env.DB_DATABASE,
