@@ -28,6 +28,11 @@ export async function up (queryInterface, Sequelize) {
       type: Sequelize.STRING(12),
       allowNull: true
     },
+    isVerified: {
+      type: Sequelize.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
     createdAt: {
       allowNull: false,
       type: Sequelize.DATE,

@@ -25,9 +25,14 @@ const User = sqDb.define('user', {
   phone: {
     type: DataTypes.STRING(12),
     allowNull: true
+  },
+  isVerified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false
   }
 }, {
-  timestamps: true
+  timestamps: true // NOTE this enables the automatic save of createAt and updateAt
 })
 
 export default User

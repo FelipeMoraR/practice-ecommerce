@@ -15,8 +15,6 @@ export const refreshTokenController = async (req, res) => {
 
     if (!user) throw new HttpError('User not founded', 404)
 
-    console.log('refreshTokenController user::: ', user)
-
     const accessToken = jwt.sign(
       { id: user.id, username: user.username },
       JWT_SECRET,
@@ -29,7 +27,7 @@ export const refreshTokenController = async (req, res) => {
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 1000 * 60 * 10 // 10 minutes
-      }).send({ message: 'Token refreshed successfully' })
+      }).send({ status: 200, message: 'Token refreshed successfully' })
   } catch (error) {
     console.error('Error in refreshToken::: ', error)
 

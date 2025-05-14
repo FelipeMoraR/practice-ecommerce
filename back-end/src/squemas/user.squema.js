@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { regexUsername, regexPassword, regexAtLeastOneNumber, regexAtLeastOneSpecialCharacter, regexAtleastOneLetter } from '../utils/regex.js'
+import { regexPassword, regexAtLeastOneNumber, regexAtLeastOneSpecialCharacter, regexAtleastOneLetter, regexOnlyLetter } from '../utils/regex.js'
 
 const blockedDomains = [
   'mailinator.com',
@@ -16,26 +16,23 @@ const blockedDomains = [
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250'),
   password: z.string().min(1, 'Password is required')
-}).refine((data) => {
-  const emailDomain = data.email.split('@')[1]?.toLowerCase()
-  return emailDomain && !blockedDomains.includes(emailDomain)
-}, {
-  message: 'Email domain not allowed',
-  path: ['email']
 })
 
 // TODO update this.
 export const registerSchema = z.object({
-  username: z.string().min(1, 'Username is required').min(4, 'Min length Username 4').max(10, 'Max length Username 10'),
-  password: z.string().min(1, 'Password is required').length(9, 'Password must have 9 characters')
+  email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250'),
+  password: z.string().min(1, 'Password is required').length(9, 'Password must have 9 characters'),
+  name: z.string().min(1, 'Name is required').max(45, 'Max length name 45'),
+  lastName: z.string().min(1, 'Last name is required').max(45, 'Max length last name 45')
 })
   .superRefine((data, context) => {
-    // ANCHOR - username valdiation
+    // ANCHOR - email valdiation
+    const emailDomain = data.email.split('@')[1]?.toLowerCase()
 
-    if (!regexUsername.test(data.username)) {
+    if (!(emailDomain && !blockedDomains.includes(emailDomain))) {
       context.addIssue({
-        message: 'Username Error: Special character are not allowed (except . and _), use letters, numbers',
-        path: ['username'],
+        message: 'Email domain not allowed',
+        path: ['email'],
         code: z.ZodIssueCode.custom
       })
     }
@@ -44,7 +41,7 @@ export const registerSchema = z.object({
 
     if (!regexPassword.test(data.password)) {
       context.addIssue({
-        message: 'Password Error: Values of password are invalid, special character allowed _ - @ # $ ! ¡ .',
+        message: 'Values of password are invalid, special character allowed _ - @ # $ ! ¡ .',
         path: ['password'],
         code: z.ZodIssueCode.custom
       })
@@ -52,7 +49,7 @@ export const registerSchema = z.object({
 
     if (!regexAtLeastOneNumber.test(data.password)) {
       context.addIssue({
-        message: 'Password Error: Password must contain at least one number',
+        message: 'Must contain at least one number',
         path: ['password'],
         code: z.ZodIssueCode.custom
       })
@@ -60,7 +57,7 @@ export const registerSchema = z.object({
 
     if (!regexAtLeastOneSpecialCharacter.test(data.password)) {
       context.addIssue({
-        message: 'Password Error: Password must contain at least one special character',
+        message: 'Must contain at least one valid special character',
         path: ['password'],
         code: z.ZodIssueCode.custom
       })
@@ -68,8 +65,28 @@ export const registerSchema = z.object({
 
     if (!regexAtleastOneLetter.test(data.password)) {
       context.addIssue({
-        message: 'Password Error: Password must contain at least one letter',
+        message: 'Must contain at least one letter',
         path: ['password'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    // ANCHOR - name validation
+
+    if (!regexOnlyLetter.test(data.name)) {
+      context.addIssue({
+        message: 'Values not valid, use just letters',
+        path: ['name'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    // ANCHOR - lastname validation
+
+    if (!regexOnlyLetter.test(data.lastName)) {
+      context.addIssue({
+        message: '',
+        path: ['lastName'],
         code: z.ZodIssueCode.custom
       })
     }

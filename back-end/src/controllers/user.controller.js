@@ -3,6 +3,7 @@ import { JWT_SECRET, NODE_ENV, SALT_ROUNDS } from '../config/config.js'
 import bcrypt from 'bcrypt'
 import { HttpError } from '../utils/customErrors.js'
 import User from '../models/user.model.js'
+import { transporter, nodeMailer } from '../config/email.config.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
@@ -11,7 +12,6 @@ export const loginUserController = async (req, res) => {
     const { email, password } = req.body
 
     const user = await User.findOne({ where: { email } })
-    console.log('loginUserController user founded::: ', user)
 
     if (!user) throw new HttpError('Email not founded', 404)
 
@@ -57,19 +57,16 @@ export const loginUserController = async (req, res) => {
 
 export const registerUserController = async (req, res) => {
   try {
-    const { email, password, name, lastname } = req.body
+    const { email, password, name, lastName } = req.body
 
     const userExist = await User.findOne({ where: { email } }) // TODO verify if we can resctrict the return information
-
-    console.log('registerUserController userExist::: ', userExist)
 
     if (userExist) throw new HttpError('User already exist', 409)
 
     const id = crypto.randomUUID()
     const hashedPassword = bcrypt.hashSync(password, salty)
 
-    const userInserted = await User.create({ id, email, password: hashedPassword, name, lastname })
-    console.log('registerUserController userInserted::: ', userInserted)
+    await User.create({ id, email, password: hashedPassword, name, lastName })
 
     return res.status(200).send({ status: 200, message: 'User Created!!!' })
   } catch (error) {
@@ -91,6 +88,26 @@ export const logoutUserController = async (_, res) => {
   } catch (error) {
     console.error('Error in logoutUserController::: ', error)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const testEmail = async (_, res) => {
+  try {
+    const info = await transporter.sendMail({
+      from: '"Mi App (Mailtrap)" <no-reply@demomailtrap.co>', // sender address
+      to: 'felipestorage2@gmail.com', // list of receivers
+      subject: 'Hello', // Subject line
+      text: 'Hello world?', // plain text body
+      html: '<b>Hello world?</b>' // html body
+    })
+
+    console.log('info', info)
+    console.log('Message sent: %s', info.messageId)
+    console.log('Preview URL: %s', nodeMailer.getTestMessageUrl(info))
+    return res.status(200).send({ status: 200, message: 'Email sended' })
+  } catch (error) {
+    console.error('Error while sending mail', error)
+    return res.status(500).send({ status: 500, message: 'Error sending email' })
   }
 }
 
