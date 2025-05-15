@@ -8,17 +8,40 @@ import { sqDb } from '../config/db.config.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
+// TODO Generate test for this controllers.
+
 export const loginUserController = async (req, res) => {
   try {
-    const data = await sqDb.transaction(async () => {
+    const result = await sqDb.transaction(async () => {
+      // NOTE extract the actual date FROM DB
+      const [result] = await sqDb.query('SELECT UTC_TIMESTAMP();') // NOTE With this i verify we are using the same time as sequelize configuration (Coordinated Universal Time)
+      const now = result[0]['UTC_TIMESTAMP()']
+
       // NOTE User verification
       const { email, password } = req.body
       const user = await User.findOne({ where: { email } })
       if (!user) throw new HttpError('Email not founded', 404)
       const passwordIsValid = bcrypt.compareSync(password, user.password)
-      if (!passwordIsValid) throw new HttpError('Invalid password', 401)
+      if (!passwordIsValid) throw new HttpError('Invalid password', 403)
 
-      // NOTE Generate tokens
+      // NOTE Spam controll
+      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90) return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: true }
+
+      // NOTE Sending email in case user isn't verified
+      if (!user.isVerified) {
+        const verifyEmailToken = jwt.sign(
+          { id: user.id },
+          JWT_SECRET,
+          { expiresIn: '10m' }
+        )
+        const endpointConfirmEmail = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/' + verifyEmailToken
+        await sendEmail(user.email, endpointConfirmEmail, user.name, user.lastName)
+        await User.update({ lastVerificationEmailSentAt: now }, { where: { id: user.id } })
+
+        return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: false }
+      }
+
+      // NOTE Generate access tokens
       const accessToken = jwt.sign(
         { id: user.id, username: user.username },
         JWT_SECRET,
@@ -33,17 +56,20 @@ export const loginUserController = async (req, res) => {
           expiresIn: '7d'
         })
 
-      return { accessToken, refreshToken }
+      return { accessToken, refreshToken, isVerified: user.isVerified }
     })
 
+    if (result.emailSendInCooldown) return res.status(503).send({ status: 503, message: 'Wait a while, email was sended...' })
+    if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
+
     return res
-      .cookie('access_token', data.accessToken, {
+      .cookie('access_token', result.accessToken, {
         httpOnly: true,
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 1000 * 60 * 10 // 10 minutes
       })
-      .cookie('refresh_token', data.refreshToken, {
+      .cookie('refresh_token', result.refreshToken, {
         httpOnly: true,
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
@@ -77,7 +103,7 @@ export const registerUserController = async (req, res) => {
         JWT_SECRET,
         { expiresIn: '10m' }
       )
-      const endpointConfirmEmail = process.env.DOMAIN_BACKEND + '/api/users/confirm-email/' + verifyEmailToken
+      const endpointConfirmEmail = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/' + verifyEmailToken
       await sendEmail(newUser.email, endpointConfirmEmail, newUser.name, newUser.lastName)
 
       return newUser
@@ -113,7 +139,7 @@ export const resendEmailVerificationController = async (req, res) => {
       const { userId } = req.body
       const user = await User.findOne({ where: { id: userId } })
       if (!user) throw new HttpError('User not founded', 404)
-      if (user.isVerified) return 304
+      if (user.isVerified) return 204
 
       // NOTE Sending email
       const verifyEmailToken = jwt.sign(
@@ -121,7 +147,7 @@ export const resendEmailVerificationController = async (req, res) => {
         JWT_SECRET,
         { expiresIn: '10m' }
       )
-      const endpointConfirmEmail = process.env.DOMAIN_BACKEND + '/api/users/confirm-email/' + verifyEmailToken
+      const endpointConfirmEmail = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/' + verifyEmailToken
       await sendEmail(user.email, endpointConfirmEmail, user.name, user.lastName)
     })
 

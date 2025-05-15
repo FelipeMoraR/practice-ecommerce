@@ -13,6 +13,7 @@ export const sqDb = new Sequelize(
     host: process.env.DB_HOST,
     dialect: 'mysql',
     port: Number(process.env.DB_PORT) || 3306,
+    timezone: process.env.DB_TIMEZONE || '+00:00',
     connectionLimit: Number(process.env.DB_CONNECTION_LIMIT) || 10,
     pool: {
       max: Number(process.env.DB_POOL_MAX) || 5,

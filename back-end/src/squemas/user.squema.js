@@ -18,7 +18,6 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required')
 })
 
-// TODO update this.
 export const registerSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250'),
   password: z.string().min(1, 'Password is required').length(9, 'Password must have 9 characters'),

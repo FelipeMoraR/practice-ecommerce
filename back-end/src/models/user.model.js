@@ -1,4 +1,4 @@
-import { DataTypes } from 'sequelize'
+import { DataTypes, Sequelize } from 'sequelize'
 import { sqDb } from '../config/db.config.js'
 
 const User = sqDb.define('user', {
@@ -30,6 +30,11 @@ const User = sqDb.define('user', {
     type: DataTypes.BOOLEAN,
     allowNull: false,
     defaultValue: false
+  },
+  lastVerificationEmailSentAt: {
+    type: DataTypes.DATE,
+    allowNull: false,
+    defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') // NOTE this work without declaring it in one creation, instead of new Date(), new Date() new to be instanciated to work correctly
   }
 }, {
   timestamps: true // NOTE this enables the automatic save of createAt and updateAt

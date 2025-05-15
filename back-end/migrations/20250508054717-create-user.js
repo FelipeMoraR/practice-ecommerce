@@ -33,6 +33,11 @@ export async function up (queryInterface, Sequelize) {
       allowNull: false,
       defaultValue: false
     },
+    lastVerificationEmailSentAt: {
+      type: Sequelize.DATE,
+      allowNull: false,
+      defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+    },
     createdAt: {
       allowNull: false,
       type: Sequelize.DATE,
