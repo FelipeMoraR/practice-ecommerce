@@ -3,44 +3,47 @@ import { JWT_SECRET, NODE_ENV, SALT_ROUNDS } from '../config/config.js'
 import bcrypt from 'bcrypt'
 import { HttpError } from '../utils/customErrors.js'
 import User from '../models/user.model.js'
-import { transporter, nodeMailer } from '../config/email.config.js'
+import sendEmail from '../utils/sendEmail.js'
+import { sqDb } from '../config/db.config.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 export const loginUserController = async (req, res) => {
   try {
-    const { email, password } = req.body
+    const data = await sqDb.transaction(async () => {
+      // NOTE User verification
+      const { email, password } = req.body
+      const user = await User.findOne({ where: { email } })
+      if (!user) throw new HttpError('Email not founded', 404)
+      const passwordIsValid = bcrypt.compareSync(password, user.password)
+      if (!passwordIsValid) throw new HttpError('Invalid password', 401)
 
-    const user = await User.findOne({ where: { email } })
+      // NOTE Generate tokens
+      const accessToken = jwt.sign(
+        { id: user.id, username: user.username },
+        JWT_SECRET,
+        {
+          expiresIn: '10m'
+        })
 
-    if (!user) throw new HttpError('Email not founded', 404)
+      const refreshToken = jwt.sign(
+        { id: user.id },
+        JWT_SECRET,
+        {
+          expiresIn: '7d'
+        })
 
-    const passwordIsValid = bcrypt.compareSync(password, user.password)
-
-    if (!passwordIsValid) throw new HttpError('Invalid password', 401)
-
-    const accessToken = jwt.sign(
-      { id: user.id, username: user.username },
-      JWT_SECRET,
-      {
-        expiresIn: '10m'
-      })
-
-    const refreshToken = jwt.sign(
-      { id: user.id },
-      JWT_SECRET,
-      {
-        expiresIn: '7d'
-      })
+      return { accessToken, refreshToken }
+    })
 
     return res
-      .cookie('access_token', accessToken, {
+      .cookie('access_token', data.accessToken, {
         httpOnly: true,
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 1000 * 60 * 10 // 10 minutes
       })
-      .cookie('refresh_token', refreshToken, {
+      .cookie('refresh_token', data.refreshToken, {
         httpOnly: true,
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
@@ -57,18 +60,30 @@ export const loginUserController = async (req, res) => {
 
 export const registerUserController = async (req, res) => {
   try {
-    const { email, password, name, lastName } = req.body
+    const user = await sqDb.transaction(async () => {
+      // NOTE Prev validations
+      const { email, password, name, lastName } = req.body
+      const userExist = await User.findOne({ where: { email } })
+      if (userExist) throw new HttpError('User already exist', 409)
 
-    const userExist = await User.findOne({ where: { email } }) // TODO verify if we can resctrict the return information
+      // NOTE Creating user
+      const id = crypto.randomUUID()
+      const hashedPassword = bcrypt.hashSync(password, salty)
+      const newUser = await User.create({ id, email, password: hashedPassword, name, lastName })
 
-    if (userExist) throw new HttpError('User already exist', 409)
+      // NOTE Generate token, endpoint and sending email
+      const verifyEmailToken = jwt.sign(
+        { id: newUser.id },
+        JWT_SECRET,
+        { expiresIn: '10m' }
+      )
+      const endpointConfirmEmail = process.env.DOMAIN_BACKEND + '/api/users/confirm-email/' + verifyEmailToken
+      await sendEmail(newUser.email, endpointConfirmEmail, newUser.name, newUser.lastName)
 
-    const id = crypto.randomUUID()
-    const hashedPassword = bcrypt.hashSync(password, salty)
+      return newUser
+    })
 
-    await User.create({ id, email, password: hashedPassword, name, lastName })
-
-    return res.status(200).send({ status: 200, message: 'User Created!!!' })
+    return res.status(200).send({ status: 200, message: 'User Created!!!', data: { idUser: user.id } })
   } catch (error) {
     // NOTE Dont send all the info of error.
     console.error('Error in registerUserController::: ', error)
@@ -91,23 +106,61 @@ export const logoutUserController = async (_, res) => {
   }
 }
 
-export const testEmail = async (_, res) => {
+export const resendEmailVerificationController = async (req, res) => {
   try {
-    const info = await transporter.sendMail({
-      from: '"Mi App (Mailtrap)" <no-reply@demomailtrap.co>', // sender address
-      to: 'felipestorage2@gmail.com', // list of receivers
-      subject: 'Hello', // Subject line
-      text: 'Hello world?', // plain text body
-      html: '<b>Hello world?</b>' // html body
+    const statusVerification = await sqDb.transaction(async () => {
+      // NOTE User validation
+      const { userId } = req.body
+      const user = await User.findOne({ where: { id: userId } })
+      if (!user) throw new HttpError('User not founded', 404)
+      if (user.isVerified) return 304
+
+      // NOTE Sending email
+      const verifyEmailToken = jwt.sign(
+        { id: user.id },
+        JWT_SECRET,
+        { expiresIn: '10m' }
+      )
+      const endpointConfirmEmail = process.env.DOMAIN_BACKEND + '/api/users/confirm-email/' + verifyEmailToken
+      await sendEmail(user.email, endpointConfirmEmail, user.name, user.lastName)
     })
 
-    console.log('info', info)
-    console.log('Message sent: %s', info.messageId)
-    console.log('Preview URL: %s', nodeMailer.getTestMessageUrl(info))
-    return res.status(200).send({ status: 200, message: 'Email sended' })
+    return res.status(statusVerification).send({ status: 200, message: statusVerification === 200 ? 'Email resended!!!' : null })
   } catch (error) {
-    console.error('Error while sending mail', error)
-    return res.status(500).send({ status: 500, message: 'Error sending email' })
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const confirmEmailVerificationController = async (req, res) => {
+  try {
+    const statusVerification = await sqDb.transaction(async () => {
+      // NOTE Token validation
+      const token = req.params.emailToken
+      if (!token) throw new HttpError('Token not founded', 404)
+
+      // NOTE User validation
+      const data = jwt.verify(token, JWT_SECRET)
+      const user = await User.findOne({ where: { id: data.id } })
+      if (!user) throw new HttpError('User not founded', 404)
+      if (user.isVerified) return 304
+
+      // NOTE updating verification
+      await User.update({ isVerified: true }, { where: { id: data.id } })
+
+      return 200
+    })
+
+    // TODO this has to redirect you to the login page.
+    return res.status(statusVerification).send({
+      status: statusVerification,
+      message: statusVerification === 200 ? 'Email verified!!!' : null
+    })
+  } catch (error) {
+    console.log('Error in confirmEmailController::: ', error)
+    if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 

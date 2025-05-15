@@ -12,9 +12,9 @@ const corsOptions = {
   credentials: true // NOTE to work with the cookies
 }
 const limiter = {
-  windowMs: parseInt(process.env.LIMITER_WINDOWMS, 10) * 1000, // 5 seconds
-  max: parseInt(process.env.LIMITER_MAX, 10),
-  message: 'Too many petitions, wait some seconds',
+  windowMs: Number(process.env.LIMITER_WINDOWMS) * 1000, // 5 seconds
+  max: Number(process.env.LIMITER_MAX),
+  message: 'Too many petitions, daddy chill.',
   standardHeaders: true,
   legacyHeaders: false
 }
