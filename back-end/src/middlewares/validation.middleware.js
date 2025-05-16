@@ -18,7 +18,7 @@ export const validateSquema = (schema) => {
 
       next()
     } catch (error) {
-      console.error('Error in validateSquema::: ', error)
+      console.error('validateSquema::: ', error)
       res.status(500).send({ status: 500, error: 'Something went wrong: Error in the validation of values' })
     }
   }

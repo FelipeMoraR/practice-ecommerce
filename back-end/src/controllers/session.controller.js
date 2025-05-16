@@ -29,7 +29,7 @@ export const refreshTokenController = async (req, res) => {
         maxAge: 1000 * 60 * 10 // 10 minutes
       }).send({ status: 200, message: 'Token refreshed successfully' })
   } catch (error) {
-    console.error('Error in refreshToken::: ', error)
+    console.error('refreshToken::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
 
@@ -57,7 +57,7 @@ export const getSessionInfoController = async (req, res) => {
     })
   } catch (error) {
     // TODO not show all the error
-    console.log('Error in getSessionInfoController::: ', error)
+    console.log('getSessionInfoController::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
 

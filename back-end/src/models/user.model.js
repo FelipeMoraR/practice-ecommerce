@@ -35,6 +35,11 @@ const User = sqDb.define('user', {
     type: DataTypes.DATE,
     allowNull: false,
     defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') // NOTE this work without declaring it in one creation, instead of new Date(), new Date() new to be instanciated to work correctly
+  },
+  lastForgotPasswordSentAt: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
   }
 }, {
   timestamps: true // NOTE this enables the automatic save of createAt and updateAt

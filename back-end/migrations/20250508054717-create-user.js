@@ -38,6 +38,11 @@ export async function up (queryInterface, Sequelize) {
       allowNull: false,
       defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
     },
+    lastForgotPasswordSentAt: {
+      type: Sequelize.DATE,
+      allowNull: true,
+      defaultValue: null
+    },
     createdAt: {
       allowNull: false,
       type: Sequelize.DATE,

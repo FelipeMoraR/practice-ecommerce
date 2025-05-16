@@ -10,6 +10,27 @@ const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // TODO Generate test for this controllers.
 
+const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, endpointConfirmEmail) => {
+  const verifyEmailToken = jwt.sign(
+    { id: idUser },
+    JWT_SECRET,
+    { expiresIn: '10m' }
+  )
+
+  const endpointComplete = endpointConfirmEmail + verifyEmailToken
+
+  await sendEmail(emailUser, endpointComplete, nameUser, lastNameUser)
+}
+
+const handlerExtractUtcTimestamp = async () => {
+  const [result] = await sqDb.query('SELECT UTC_TIMESTAMP();') // NOTE With this i verify we are using the same time as sequelize configuration (Coordinated Universal Time)
+  const now = result[0]['UTC_TIMESTAMP()']
+
+  if (!now) throw new Error('Couldnt extract the time')
+
+  return now
+}
+
 export const loginUserController = async (req, res) => {
   try {
     const result = await sqDb.transaction(async () => {
@@ -25,17 +46,13 @@ export const loginUserController = async (req, res) => {
       if (!passwordIsValid) throw new HttpError('Invalid password', 403)
 
       // NOTE Spam controll
-      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90) return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: true }
+      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: true }
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const verifyEmailToken = jwt.sign(
-          { id: user.id },
-          JWT_SECRET,
-          { expiresIn: '10m' }
-        )
-        const endpointConfirmEmail = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/' + verifyEmailToken
-        await sendEmail(user.email, endpointConfirmEmail, user.name, user.lastName)
+        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken)
+
         await User.update({ lastVerificationEmailSentAt: now }, { where: { id: user.id } })
 
         return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: false }
@@ -59,7 +76,7 @@ export const loginUserController = async (req, res) => {
       return { accessToken, refreshToken, isVerified: user.isVerified }
     })
 
-    if (result.emailSendInCooldown) return res.status(503).send({ status: 503, message: 'Wait a while, email was sended...' })
+    if (result.emailSendInCooldown && !result.isVerified) return res.status(503).send({ status: 503, message: 'Wait a while, email was sended...' })
     if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
 
     return res
@@ -77,7 +94,7 @@ export const loginUserController = async (req, res) => {
       })
       .send({ status: 200, message: 'User logged!!!' })
   } catch (error) {
-    console.log('Error in loginUserController::: ', error)
+    console.log('loginUserController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
 
     return res.status(500).send({ status: 500, message: 'Internal server error' })
@@ -98,13 +115,8 @@ export const registerUserController = async (req, res) => {
       const newUser = await User.create({ id, email, password: hashedPassword, name, lastName })
 
       // NOTE Generate token, endpoint and sending email
-      const verifyEmailToken = jwt.sign(
-        { id: newUser.id },
-        JWT_SECRET,
-        { expiresIn: '10m' }
-      )
-      const endpointConfirmEmail = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/' + verifyEmailToken
-      await sendEmail(newUser.email, endpointConfirmEmail, newUser.name, newUser.lastName)
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+      await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken)
 
       return newUser
     })
@@ -112,7 +124,7 @@ export const registerUserController = async (req, res) => {
     return res.status(200).send({ status: 200, message: 'User Created!!!', data: { idUser: user.id } })
   } catch (error) {
     // NOTE Dont send all the info of error.
-    console.error('Error in registerUserController::: ', error)
+    console.error('registerUserController::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
 
@@ -127,7 +139,7 @@ export const logoutUserController = async (_, res) => {
       .clearCookie('refresh_token')
       .send({ message: 'Logout successful' })
   } catch (error) {
-    console.error('Error in logoutUserController::: ', error)
+    console.error('logoutUserController::: ', error)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
@@ -135,24 +147,31 @@ export const logoutUserController = async (_, res) => {
 export const resendEmailVerificationController = async (req, res) => {
   try {
     const statusVerification = await sqDb.transaction(async () => {
+      // NOTE extract the actual date FROM DB
+      const [result] = await sqDb.query('SELECT UTC_TIMESTAMP();')
+      const now = result[0]['UTC_TIMESTAMP()']
+
       // NOTE User validation
       const { userId } = req.body
       const user = await User.findOne({ where: { id: userId } })
       if (!user) throw new HttpError('User not founded', 404)
       if (user.isVerified) return 204
 
+      // NOTE Spam controll
+      if (!user.isVerified && (now - user.lastVerificationEmailSentAt) / 1000 <= 90) {
+        throw new HttpError('Email sended, wait a moment', 503)
+      }
+
       // NOTE Sending email
-      const verifyEmailToken = jwt.sign(
-        { id: user.id },
-        JWT_SECRET,
-        { expiresIn: '10m' }
-      )
-      const endpointConfirmEmail = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/' + verifyEmailToken
-      await sendEmail(user.email, endpointConfirmEmail, user.name, user.lastName)
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+      await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken)
+      await User.update({ lastVerificationEmailSentAt: now }, { where: { id: userId } })
+      return 200
     })
 
     return res.status(statusVerification).send({ status: 200, message: statusVerification === 200 ? 'Email resended!!!' : null })
   } catch (error) {
+    console.log('resendEmailVerificationController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
@@ -183,7 +202,68 @@ export const confirmEmailVerificationController = async (req, res) => {
       message: statusVerification === 200 ? 'Email verified!!!' : null
     })
   } catch (error) {
-    console.log('Error in confirmEmailController::: ', error)
+    console.log('confirmEmailController::: ', error)
+    if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const forgotPasswordValidateEmailController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+      // NOTE extract the actual date FROM DB
+      const now = await handlerExtractUtcTimestamp()
+
+      // NOTE Finding user
+      const { email } = req.body
+      const user = await User.findOne({ where: { email } })
+      if (!user) throw new HttpError('User not founded', 404)
+
+      // NOTE Spam controll
+      if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) throw new HttpError('Email sended, wait a moment', 503)
+
+      // NOTE Sending email
+      // const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+      // await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName)
+      await User.update({ lastForgotPasswordSentAt: now }, { where: { id: user.id } })
+    })
+
+    return res.status(200).send({ status: 200, message: 'Email confirmation forgot password sended!! ' })
+  } catch (error) {
+    console.log('forgotPasswordValidateEmailController::: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+// TODO CHANGE ALL THIS
+export const confirmForgotPasswordController = async (req, res) => {
+  try {
+    const statusVerification = await sqDb.transaction(async () => {
+      // NOTE Token validation
+      const token = req.params.emailToken
+      if (!token) throw new HttpError('Token not founded', 404)
+
+      // NOTE User validation
+      const data = jwt.verify(token, JWT_SECRET)
+      const user = await User.findOne({ where: { id: data.id } })
+      if (!user) throw new HttpError('User not founded', 404)
+      if (user.isVerified) return 304
+
+      // NOTE updating verification
+      await User.update({ isVerified: true }, { where: { id: data.id } })
+
+      return 200
+    })
+
+    // TODO this has to redirect you to the login page.
+    return res.status(statusVerification).send({
+      status: statusVerification,
+      message: statusVerification === 200 ? 'Email verified!!!' : null
+    })
+  } catch (error) {
+    console.log('confirmEmailController::: ', error)
     if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
