@@ -90,3 +90,17 @@ export const registerSchema = z.object({
       })
     }
   })
+
+export const emailSchema = z.object({
+  email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250')
+}).refine((data) => {
+  const emailDomain = data.email.split('@')[1]?.toLowerCase()
+  return emailDomain && !blockedDomains.includes(emailDomain)
+}, {
+  message: 'Email domain not allowed',
+  path: ['email']
+})
+
+export const userIdSchema = z.object({
+  userId: z.string().min(1, 'userId is required').length(36, 'userId must have 36 char')
+})
