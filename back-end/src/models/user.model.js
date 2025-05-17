@@ -1,5 +1,6 @@
 import { DataTypes, Sequelize } from 'sequelize'
 import { sqDb } from '../config/db.config.js'
+import TypeUser from './typeUser.model.js'
 
 const User = sqDb.define('user', {
   id: {
@@ -40,9 +41,22 @@ const User = sqDb.define('user', {
     type: DataTypes.DATE,
     allowNull: true,
     defaultValue: null
+  },
+  fk_id_type_user: {
+    type: DataTypes.INTEGER,
+    allowNull: true
   }
 }, {
   timestamps: true // NOTE this enables the automatic save of createAt and updateAt
+})
+
+TypeUser.hasMany(User, {
+  foreignKey: 'fk_id_type_user',
+  onDelete: 'RESTRICT'
+})
+
+User.belongsTo(TypeUser, {
+  foreignKey: 'fk_id_type_user'
 })
 
 export default User

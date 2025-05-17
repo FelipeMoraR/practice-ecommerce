@@ -43,6 +43,15 @@ export async function up (queryInterface, Sequelize) {
       allowNull: true,
       defaultValue: null
     },
+    fk_id_type_user: {
+      type: Sequelize.INTEGER,
+      allowNull: false,
+      references: {
+        model: 'typeuser',
+        key: 'id'
+      },
+      onDelete: 'RESTRICT'
+    },
     createdAt: {
       allowNull: false,
       type: Sequelize.DATE,
