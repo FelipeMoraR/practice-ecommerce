@@ -6,7 +6,7 @@ import {
   protectedRoute,
   confirmEmailVerificationController,
   resendEmailVerificationController,
-  forgotPasswordValidateEmailController,
+  forgotPasswordSendEmailController,
   confirmForgotPasswordController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validation.middleware.js'
@@ -24,6 +24,6 @@ UserRouter.post('/register', validateSquema(registerSchema), registerUserControl
 UserRouter.post('/logout', logoutUserController)
 UserRouter.post('/protected', protectedRoute)
 UserRouter.post('/resend-email-verification', validateSquema(userIdSchema), resendEmailVerificationController)
-UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema), forgotPasswordValidateEmailController)
+UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema), forgotPasswordSendEmailController)
 
 export default UserRouter

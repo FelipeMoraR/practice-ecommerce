@@ -2,9 +2,10 @@ import jwt from 'jsonwebtoken'
 import { JWT_SECRET, NODE_ENV, SALT_ROUNDS } from '../config/config.js'
 import bcrypt from 'bcrypt'
 import { HttpError } from '../utils/customErrors.js'
-import User from '../models/user.model.js'
 import sendEmail from '../utils/sendEmail.js'
 import { sqDb } from '../config/db.config.js'
+import User from '../models/user.model.js'
+import TokenWhiteList from '../models/tokenWhiteList.model.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
@@ -75,7 +76,7 @@ export const loginUserController = async (req, res) => {
       return { accessToken, refreshToken, isVerified: user.isVerified }
     })
 
-    if (result.emailSendInCooldown && !result.isVerified) return res.status(503).send({ status: 503, message: 'Wait a while, email was sended...' })
+    if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Wait a while, email was sended...' })
     if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
 
     return res
@@ -111,7 +112,7 @@ export const registerUserController = async (req, res) => {
       // NOTE Creating user
       const id = crypto.randomUUID()
       const hashedPassword = bcrypt.hashSync(password, salty)
-      const newUser = await User.create({ id, email, password: hashedPassword, name, lastName })
+      const newUser = await User.create({ id, email, password: hashedPassword, name, lastName, fk_id_type_user: 2 })
 
       // NOTE Generate token, endpoint and sending email
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
@@ -157,7 +158,7 @@ export const resendEmailVerificationController = async (req, res) => {
 
       // NOTE Spam controll
       if (!user.isVerified && (now - user.lastVerificationEmailSentAt) / 1000 <= 90) {
-        throw new HttpError('Email sended, wait a moment', 503)
+        throw new HttpError('Email sended, wait a moment', 403)
       }
 
       // NOTE Sending email
@@ -207,9 +208,10 @@ export const confirmEmailVerificationController = async (req, res) => {
   }
 }
 
-export const forgotPasswordValidateEmailController = async (req, res) => {
+// TODO test this
+export const forgotPasswordSendEmailController = async (req, res) => {
   try {
-    await sqDb.transaction(async () => {
+    const dataStatus = await sqDb.transaction(async () => {
       // NOTE extract the actual date FROM DB
       const now = await handlerExtractUtcTimestamp()
 
@@ -218,25 +220,39 @@ export const forgotPasswordValidateEmailController = async (req, res) => {
       const user = await User.findOne({ where: { email } })
       if (!user) throw new HttpError('User not founded', 404)
 
+      // NOTE Email verify spam controll
+      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) throw new HttpError('Email verify user was already sended, wait a moment...', 403)
+
+      // NOTE Sending email in case user isn't verified
+      if (!user.isVerified) {
+        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
+
+        await User.update({ lastVerificationEmailSentAt: now }, { where: { id: user.id } })
+
+        return { status: 200, message: 'Email verify user sended' }
+      }
+
       // NOTE Spam controll
-      if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) throw new HttpError('Email sended, wait a moment', 503)
+      if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) throw new HttpError('Email verify forgot password was already sended, wait a moment', 403)
 
       // NOTE Sending email
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email-forgot-pass/'
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '1h')
       await User.update({ lastForgotPasswordSentAt: now }, { where: { id: user.id } })
+
+      return { status: 200, message: 'Email verify forgot password sended' }
     })
 
-    return res.status(200).send({ status: 200, message: 'Email confirmation forgot password sended!! ' })
+    return res.status(dataStatus.status).send({ status: dataStatus.status, message: dataStatus.message })
   } catch (error) {
-    console.log('forgotPasswordValidateEmailController::: ', error)
+    console.log('forgotPasswordSendEmailController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
-// TODO Save the token in the white list
-// TODO Create tokenWhiteList Table and tokenBlackList
+// TODO test this
 export const confirmForgotPasswordController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
@@ -245,11 +261,34 @@ export const confirmForgotPasswordController = async (req, res) => {
       if (!token) throw new HttpError('Token not founded', 404)
 
       // NOTE User validation
-      const data = jwt.verify(token, JWT_SECRET)
+      const data = jwt.verify(token, JWT_SECRET) // NOTE this controll if the token is not valid (exp, secret, format, etc)
       const user = await User.findOne({ where: { id: data.id } })
       if (!user) throw new HttpError('User not founded', 404)
 
-      return 200
+      // NOTE Saving token in white list
+      const idToken = crypto.randomUUID()
+      const expToken = new Date(data.exp * 1000)
+
+      console.log('confirmForgotPasswordController user id::: ', user.id)
+      // ANCHOR 1 token per issue, if the user send 2 petitions of forgot password we have to inactive the oldest.
+      const oldUserToken = await TokenWhiteList.findOne({ where: { fk_id_user: user.id, isUsed: false, fk_id_type_token: 1 } })
+
+      console.log('confirmForgotPasswordController oldUserToken::: ', oldUserToken.token)
+
+      if (oldUserToken.token === token) {
+        console.log('token already saved...', token)
+        return
+      }
+
+      if (oldUserToken.token !== token) {
+        console.log('Destroying old token and adding the new one...')
+        await TokenWhiteList.destroy({ where: { id: oldUserToken.id } }) // TODO change to destroy
+        await TokenWhiteList.create({ id: idToken, token, expDate: expToken, fk_id_user: user.id, fk_id_type_token: 1 })
+        return
+      }
+
+      console.log('Adding token')
+      await TokenWhiteList.create({ id: idToken, token, expDate: expToken, fk_id_user: user.id, fk_id_type_token: 1 })
     })
 
     return res.status(200).send({
