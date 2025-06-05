@@ -9,7 +9,7 @@ import TokenWhiteList from '../models/tokenWhiteList.model.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
-// TODO Generate test for this controllers.
+// TODO Generate test for all controllers.
 
 const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, endpointConfirmEmail, expiredIn) => {
   const verifyToken = jwt.sign(
@@ -41,7 +41,7 @@ export const loginUserController = async (req, res) => {
       // NOTE User verification
       const { email, password } = req.body
       const user = await User.findOne({ where: { email } })
-      if (!user) throw new HttpError('Email not founded', 404)
+      if (!user) throw new HttpError('Email not finded', 404)
       const passwordIsValid = bcrypt.compareSync(password, user.password)
       if (!passwordIsValid) throw new HttpError('Invalid password', 403)
 
@@ -50,7 +50,7 @@ export const loginUserController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
         await User.update({ lastVerificationEmailSentAt: now }, { where: { id: user.id } })
@@ -115,7 +115,7 @@ export const registerUserController = async (req, res) => {
       const newUser = await User.create({ id, email, password: hashedPassword, name, lastName, fk_id_type_user: 2 })
 
       // NOTE Generate token, endpoint and sending email
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
 
       return newUser
@@ -153,7 +153,7 @@ export const resendEmailVerificationController = async (req, res) => {
       // NOTE User validation
       const { userId } = req.body
       const user = await User.findOne({ where: { id: userId } })
-      if (!user) throw new HttpError('User not founded', 404)
+      if (!user) throw new HttpError('User not finded', 404)
       if (user.isVerified) return 204
 
       // NOTE Spam controll
@@ -162,7 +162,7 @@ export const resendEmailVerificationController = async (req, res) => {
       }
 
       // NOTE Sending email
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
       await User.update({ lastVerificationEmailSentAt: now }, { where: { id: userId } })
       return 200
@@ -181,12 +181,12 @@ export const confirmEmailVerificationController = async (req, res) => {
     const statusVerification = await sqDb.transaction(async () => {
       // NOTE Token validation
       const token = req.params.emailToken
-      if (!token) throw new HttpError('Token not founded', 404)
+      if (!token) throw new HttpError('Token not finded', 404)
 
       // NOTE User validation
       const data = jwt.verify(token, JWT_SECRET)
       const user = await User.findOne({ where: { id: data.id } })
-      if (!user) throw new HttpError('User not founded', 404)
+      if (!user) throw new HttpError('User not finded', 404)
       if (user.isVerified) return 304
 
       // NOTE updating verification
@@ -208,8 +208,7 @@ export const confirmEmailVerificationController = async (req, res) => {
   }
 }
 
-// TODO test this
-export const forgotPasswordSendEmailController = async (req, res) => {
+export const sendForgotPasswordEmailController = async (req, res) => {
   try {
     const dataStatus = await sqDb.transaction(async () => {
       // NOTE extract the actual date FROM DB
@@ -218,14 +217,15 @@ export const forgotPasswordSendEmailController = async (req, res) => {
       // NOTE Finding user
       const { email } = req.body
       const user = await User.findOne({ where: { email } })
-      if (!user) throw new HttpError('User not founded', 404)
+      if (!user) throw new HttpError('User not finded', 404)
 
       // NOTE Email verify spam controll
+      // NOTE Remember user has to be verified to use the forgot password controller
       if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) throw new HttpError('Email verify user was already sended, wait a moment...', 403)
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email/'
+        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
         await User.update({ lastVerificationEmailSentAt: now }, { where: { id: user.id } })
@@ -237,7 +237,7 @@ export const forgotPasswordSendEmailController = async (req, res) => {
       if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) throw new HttpError('Email verify forgot password was already sended, wait a moment', 403)
 
       // NOTE Sending email
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/users/confirm-email-forgot-pass/'
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email-forgot-pass/'
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '1h')
       await User.update({ lastForgotPasswordSentAt: now }, { where: { id: user.id } })
 
@@ -252,51 +252,94 @@ export const forgotPasswordSendEmailController = async (req, res) => {
   }
 }
 
-// TODO test this
 export const confirmForgotPasswordController = async (req, res) => {
   try {
-    await sqDb.transaction(async () => {
+    const status = await sqDb.transaction(async () => {
       // NOTE Token validation
       const token = req.params.forgotPassToken
-      if (!token) throw new HttpError('Token not founded', 404)
+      if (!token) throw new HttpError('Token not finded', 404)
 
       // NOTE User validation
       const data = jwt.verify(token, JWT_SECRET) // NOTE this controll if the token is not valid (exp, secret, format, etc)
       const user = await User.findOne({ where: { id: data.id } })
-      if (!user) throw new HttpError('User not founded', 404)
+      if (!user) throw new HttpError('User not finded', 404)
 
       // NOTE Saving token in white list
       const idToken = crypto.randomUUID()
       const expToken = new Date(data.exp * 1000)
 
-      console.log('confirmForgotPasswordController user id::: ', user.id)
       // ANCHOR 1 token per issue, if the user send 2 petitions of forgot password we have to inactive the oldest.
-      const oldUserToken = await TokenWhiteList.findOne({ where: { fk_id_user: user.id, isUsed: false, fk_id_type_token: 1 } })
+      const oldUserToken = await TokenWhiteList.findOne({ where: { fk_id_user: user.id, fk_id_type_token: 1 } })
 
-      console.log('confirmForgotPasswordController oldUserToken::: ', oldUserToken.token)
-
-      if (oldUserToken.token === token) {
-        console.log('token already saved...', token)
-        return
-      }
-
-      if (oldUserToken.token !== token) {
-        console.log('Destroying old token and adding the new one...')
-        await TokenWhiteList.destroy({ where: { id: oldUserToken.id } }) // TODO change to destroy
+      // NOTE This happend when the user try to confirm the forgot password for the first time
+      if (!oldUserToken) {
+        console.log('confirmForgotPasswordController::: Saving token')
         await TokenWhiteList.create({ id: idToken, token, expDate: expToken, fk_id_user: user.id, fk_id_type_token: 1 })
-        return
+        return 200
       }
 
-      console.log('Adding token')
-      await TokenWhiteList.create({ id: idToken, token, expDate: expToken, fk_id_user: user.id, fk_id_type_token: 1 })
+      // NOTE This is when the user make send the same token as previus.
+      if (oldUserToken.token === token) {
+        console.log('confirmForgotPasswordController::: Token already saved')
+        return 304
+      }
+
+      // NOTE this is when user already has a token in the white list but send a new one
+      if (oldUserToken.token !== token) {
+        console.log('confirmForgotPasswordController::: Destroying old token and adding the new one')
+        await TokenWhiteList.destroy({ where: { id: oldUserToken.id } })
+        await TokenWhiteList.create({ id: idToken, token, expDate: expToken, fk_id_user: user.id, fk_id_type_token: 1 })
+        return 200
+      }
     })
 
-    return res.status(200).send({
-      status: 200,
+    return res.status(status).send({
+      status,
       message: 'User can change its password'
     })
   } catch (error) {
     console.log('confirmForgotPasswordController::: ', error)
+    if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const changePasswordController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+      const { userId, newPassword } = req.body
+
+      // NOTE Validating user
+      const user = await User.findOne({ where: { id: userId } })
+      if (!user) throw new HttpError('User not finded', 404)
+
+      // NOTE Validating token
+      const tokenInWhiteList = await TokenWhiteList.findOne({ where: { fk_id_user: user.id } })
+      if (!tokenInWhiteList) throw new HttpError('Token doesnt exist', 404)
+      if (tokenInWhiteList.isUsed) throw new HttpError('Token invalid, it was already used', 498)
+      jwt.verify(tokenInWhiteList.token, JWT_SECRET)
+
+      // NOTE Validating the new password
+      const newPasswordIsNotNew = bcrypt.compareSync(newPassword, user.password)
+      console.log(newPasswordIsNotNew)
+      if (newPasswordIsNotNew) throw new HttpError('New password have to be new', 422)
+      // NOTE Creating new password encripted
+      const hashedPassword = bcrypt.hashSync(newPassword, salty)
+
+      // NOTE Updating password user and invalidating token
+      const now = await handlerExtractUtcTimestamp()
+
+      await TokenWhiteList.update({ isUsed: true, updatedAt: now }, { where: { id: tokenInWhiteList.id } })
+      await User.update({ password: hashedPassword, updatedAt: now }, { where: { id: userId } })
+    })
+
+    return res.status(200).send({
+      status: 200,
+      message: 'Password changed'
+    })
+  } catch (error) {
+    console.log('changePasswordController::: ', error)
     if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })

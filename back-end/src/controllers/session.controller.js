@@ -13,7 +13,7 @@ export const refreshTokenController = async (req, res) => {
 
     const user = await User.findOne({ where: { id: tokenValid.id } })
 
-    if (!user) throw new HttpError('User not founded', 404)
+    if (!user) throw new HttpError('User not finded', 404)
 
     const accessToken = jwt.sign(
       { id: user.id, username: user.username },

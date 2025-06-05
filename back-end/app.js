@@ -15,7 +15,7 @@ const corsOptions = {
 const limiter = {
   windowMs: Number(process.env.LIMITER_WINDOWMS) * 1000, // NOTE Time when the client can make petition
   max: Number(process.env.LIMITER_MAX), // NOTE Max of petitions per windowMs
-  message: 'Too many petitions, daddy chill.',
+  message: 'Too many petitions.',
   standardHeaders: true,
   legacyHeaders: false
 }
@@ -27,10 +27,11 @@ app.use(rateLimit(limiter)) // ANCHOR this limiter is per IP
 app.use(helmet()) // NOTE HTTP secured by adding the correct ones and hidding others
 
 // Custom Routes
-app.use('/api/users', UserRouter)
-app.use('/api/sessions', SessionRouter)
+app.use('/api/v1/users', UserRouter)
+app.use('/api/v1/sessions', SessionRouter)
 
-// Global middleware when they send invalid JSON, this has to be in the end because this capture all the errors and dont interfer with the other validations
+// NOTE Global middleware when they send invalid JSON, this has to be in the end because this capture all the errors and dont interfer with the other validations
+// ANCHOR This function have to have these 4 parameters because of this express recognize this function as an error-handling middleware, this is called only when errors exist.
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) return res.status(400).send({ status: 400, error: 'Invalid JSON' })
 
