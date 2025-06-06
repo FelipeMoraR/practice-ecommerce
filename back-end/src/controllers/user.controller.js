@@ -321,14 +321,13 @@ export const changePasswordController = async (req, res) => {
       if (!user) throw new HttpError('User not finded', 404)
 
       // NOTE Validating token
-      const tokenInWhiteList = await TokenWhiteList.findOne({ where: { fk_id_user: user.id } })
+      const tokenInWhiteList = await TokenWhiteList.findOne({ where: { fk_id_user: user.id, fk_id_type_token: 1 } })
       if (!tokenInWhiteList) throw new HttpError('Token doesnt exist', 404)
       if (tokenInWhiteList.isUsed) throw new HttpError('Token invalid, it was already used', 498)
       jwt.verify(tokenInWhiteList.token, JWT_SECRET)
 
       // NOTE Validating the new password
       const newPasswordIsNotNew = bcrypt.compareSync(newPassword, user.password)
-      console.log(newPasswordIsNotNew)
       if (newPasswordIsNotNew) throw new HttpError('New password have to be new', 422)
       // NOTE Creating new password encripted
       const hashedPassword = bcrypt.hashSync(newPassword, salty)
