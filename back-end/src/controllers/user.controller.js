@@ -363,6 +363,6 @@ export const protectedRoute = (req, res) => {
     const data = jwt.verify(token, JWT_SECRET)
     return res.status(200).send({ status: 200, data })
   } catch (error) {
-    return res.status(500).send('Internal server error')
+    return res.status(500).send('Internal server error:')
   }
 }
