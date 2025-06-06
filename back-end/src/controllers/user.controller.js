@@ -53,6 +53,7 @@ export const loginUserController = async (req, res) => {
         const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
+        // FIXME add the updatedAt update
         await User.update({ lastVerificationEmailSentAt: now }, { where: { id: user.id } })
 
         return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: false }
@@ -164,6 +165,7 @@ export const resendEmailVerificationController = async (req, res) => {
       // NOTE Sending email
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
+      // FIXME add the updatedAt update
       await User.update({ lastVerificationEmailSentAt: now }, { where: { id: userId } })
       return 200
     })
@@ -190,6 +192,7 @@ export const confirmEmailVerificationController = async (req, res) => {
       if (user.isVerified) return 304
 
       // NOTE updating verification
+      // FIXME add the updatedAt update
       await User.update({ isVerified: true }, { where: { id: data.id } })
 
       return 200
@@ -228,6 +231,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
         const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
+        // FIXME add the updatedAt update
         await User.update({ lastVerificationEmailSentAt: now }, { where: { id: user.id } })
 
         return { status: 200, message: 'Email verify user sended' }
@@ -239,6 +243,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       // NOTE Sending email
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email-forgot-pass/'
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '1h')
+      // FIXME add the updatedAt update
       await User.update({ lastForgotPasswordSentAt: now }, { where: { id: user.id } })
 
       return { status: 200, message: 'Email verify forgot password sended' }
@@ -287,6 +292,7 @@ export const confirmForgotPasswordController = async (req, res) => {
       // NOTE this is when user already has a token in the white list but send a new one
       if (oldUserToken.token !== token) {
         console.log('confirmForgotPasswordController::: Destroying old token and adding the new one')
+        // FIXME Just made an update XD
         await TokenWhiteList.destroy({ where: { id: oldUserToken.id } })
         await TokenWhiteList.create({ id: idToken, token, expDate: expToken, fk_id_user: user.id, fk_id_type_token: 1 })
         return 200
