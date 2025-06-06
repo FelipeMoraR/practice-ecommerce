@@ -242,7 +242,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email-forgot-pass/'
-      await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '1h')
+      await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '15m')
       // FIXME add the updatedAt update
       await User.update({ lastForgotPasswordSentAt: now }, { where: { id: user.id } })
 
