@@ -17,11 +17,6 @@ const TokenWhiteList = sqDb.define('tokenwhitelist', {
     type: DataTypes.DATE,
     allowNull: false
   },
-  isUsed: {
-    type: DataTypes.BOOLEAN,
-    allowNull: false,
-    defaultValue: false
-  },
   fk_id_user: {
     type: DataTypes.STRING(36),
     allowNull: true

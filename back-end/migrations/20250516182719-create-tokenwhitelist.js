@@ -16,11 +16,6 @@ export async function up (queryInterface, Sequelize) {
       type: Sequelize.DATE,
       allowNull: false
     },
-    isUsed: {
-      type: Sequelize.BOOLEAN,
-      allowNull: false,
-      defaultValue: false
-    },
     fk_id_user: {
       type: Sequelize.STRING(36),
       allowNull: true,

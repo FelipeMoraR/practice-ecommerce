@@ -4,13 +4,22 @@
 export async function up (queryInterface, Sequelize) {
   await queryInterface.createTable('tokenblacklist', {
     id: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.STRING(36),
       primaryKey: true,
-      autoIncrement: true
+      autoIncrement: false
     },
     token: {
       type: Sequelize.STRING(500),
       allowNull: false
+    },
+    fk_id_user: {
+      type: Sequelize.STRING(36),
+      allowNull: true,
+      references: {
+        model: 'user',
+        key: 'id'
+      },
+      onDelete: 'SET NULL'
     },
     fk_id_type_token: {
       type: Sequelize.INTEGER,

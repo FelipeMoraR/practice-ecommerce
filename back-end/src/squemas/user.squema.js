@@ -106,7 +106,7 @@ export const userIdSchema = z.object({
 })
 
 export const changePasswordSchema = z.object({
-  userId: z.string().min(1, 'userId is required').length(36, 'userId must have 36 char'),
+  token: z.string().min(1, 'token is required'),
   newPassword: z.string().min(1, 'New password is required').length(9, 'New password must have 9 characters'),
   confirmNewPassword: z.string().min(1, 'Confirm new password is required').length(9, 'Confirm new password must have 9 characters')
 })

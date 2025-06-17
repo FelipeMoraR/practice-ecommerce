@@ -4,9 +4,8 @@ import {
   registerUserController,
   logoutUserController,
   confirmEmailVerificationController,
-  resendEmailVerificationController,
+  sendEmailVerificationController,
   sendForgotPasswordEmailController,
-  confirmForgotPasswordController,
   changePasswordController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validation.middleware.js'
@@ -16,13 +15,12 @@ const UserRouter = express.Router()
 
 // ANCHOR GET
 UserRouter.get('/confirm-email/:emailToken', confirmEmailVerificationController)
-UserRouter.get('/confirm-email-forgot-pass/:forgotPassToken', confirmForgotPasswordController)
 
 // ANCHOR POST
 UserRouter.post('/login', validateSquema(loginSchema), loginUserController)
 UserRouter.post('/register', validateSquema(registerSchema), registerUserController)
 UserRouter.post('/logout', logoutUserController)
-UserRouter.post('/resend-email-verification', validateSquema(userIdSchema), resendEmailVerificationController)
+UserRouter.post('/resend-email-verification', validateSquema(userIdSchema), sendEmailVerificationController)
 UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema), sendForgotPasswordEmailController)
 UserRouter.post('/update-password', validateSquema(changePasswordSchema), changePasswordController)
 
