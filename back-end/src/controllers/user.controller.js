@@ -7,23 +7,18 @@ import { sqDb } from '../config/db.config.js'
 import User from '../models/user.model.js'
 import TokenWhiteList from '../models/tokenWhiteList.model.js'
 import TokenBlackList from '../models/tokenBlackList.model.js'
-
+import { randomBytes } from 'crypto'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 // FIXME hash all the tokens
 // TODO Generate test for all controllers.
 
 // NOTE Handlers
 const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, endpointConfirmEmail, expiredIn, customToken) => {
-  let verifyToken
-  if (!customToken) {
-    verifyToken = jwt.sign(
-      { id: idUser },
-      JWT_SECRET,
-      { expiresIn: expiredIn }
-    )
-  } else {
-    verifyToken = customToken
-  }
+  const verifyToken = jwt.sign(
+    { id: idUser },
+    JWT_SECRET,
+    { expiresIn: expiredIn }
+  )
 
   const endpointComplete = endpointConfirmEmail + verifyToken
 
@@ -284,26 +279,31 @@ export const sendForgotPasswordEmailController = async (req, res) => {
         })
       }
       // NOTE Saving a new one
-      const passwordResetToken = jwt.sign(
-        { id: user.id, type: 'passwordReset' },
+      const idResetTokenWhiteList = crypto.randomUUID()
+      console.log('idResetTokenWhiteList => ', idResetTokenWhiteList)
+      const passwordResetTokenJwt = jwt.sign(
+        { id: user.id, jti: idResetTokenWhiteList, type: 'passwordReset' },
         JWT_SECRET,
         { expiresIn: '15m' }
       )
+
       // TODO Verify if is better use hash or hashSync
-      const hashedResetToken = await bcrypt.hash(passwordResetToken, salty)
-      const decodeResetToken = jwt.decode(passwordResetToken)
-      const idResetTokenWhiteList = crypto.randomUUID()
+      const secretReset = randomBytes(32).toString('hex')
+      const hashedResetToken = bcrypt.hashSync(secretReset, salty)
+      const decodeResetTokenJwt = jwt.decode(passwordResetTokenJwt)
+
       await TokenWhiteList.create({
         id: idResetTokenWhiteList,
         token: hashedResetToken,
-        expDate: new Date(decodeResetToken.exp * 1000),
+        expDate: new Date(decodeResetTokenJwt.exp * 1000),
         fk_id_user: user.id,
         fk_id_type_token: 1
       })
 
       // NOTE Sending email
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/front-view/reste-password/' // TODO This has to be send to the update password form
-      await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '15m', passwordResetToken)
+      // TODO This has to be send to the update password form
+      const endpoint = process.env.CUSTOM_DOMAIN + '/front-view/reste-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
+      await sendEmail(user.email, endpoint, user.name, user.lastName)
 
       await User.update({ lastForgotPasswordSentAt: now, updateAt: now }, { where: { id: user.id } })
 
@@ -322,21 +322,20 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 export const changePasswordController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
-      const { token, newPassword } = req.body
+      const { token, secret, newPassword } = req.body
       // NOTE Validate token with jwt
       const dataToken = jwt.verify(token, JWT_SECRET)
+
+      const tokenIsBanned = await TokenBlackList.findByPk(dataToken.jti)
+      if (tokenIsBanned) throw new HttpError('Token is banned', 401)
 
       // NOTE Validating token in whiteList
       const tokenInWhiteList = await TokenWhiteList.findOne({ where: { fk_id_user: dataToken.id, fk_id_type_token: 1 } })
       if (!tokenInWhiteList) throw new HttpError('Token doesnt exist', 404)
+
       // TODO Verify whose is better copare or comapreSync
-      const isTokenHashMatch = await bcrypt.compare(token, tokenInWhiteList.token)
-      if (!isTokenHashMatch) {
-        throw new HttpError('Invalid password reset token.', 401)
-      }
-      // FIXME Validate this later
-      // const tokenIsBanned = await TokenBlackList.findOne({ where: { token: tokenInWhiteList.token } })
-      // if (tokenIsBanned) throw new HttpError('Token is not valid', 401)
+      const isSecretMatch = bcrypt.compareSync(secret, tokenInWhiteList.token)
+      if (!isSecretMatch) throw new HttpError('Invalid secret', 401)
 
       // NOTE Validating the new password
       const user = await User.findByPk(dataToken.id)
@@ -349,11 +348,9 @@ export const changePasswordController = async (req, res) => {
 
       // NOTE Updating password user and invalidating token
       const now = await handlerExtractUtcTimestamp()
-      const idNewBlackListToken = crypto.randomUUID()
-      const dataExpParsed = new Date(dataToken.exp * 1000)
 
       await TokenWhiteList.destroy({ where: { id: tokenInWhiteList.id } })
-      await TokenBlackList.create({ id: idNewBlackListToken, token: tokenInWhiteList.token, expDate: dataExpParsed, fk_id_user: tokenInWhiteList.fk_id_user, fk_id_type_token: tokenInWhiteList.fk_id_type_token })
+      await TokenBlackList.create({ id: tokenInWhiteList.id, token: tokenInWhiteList.token, fk_id_user: tokenInWhiteList.fk_id_user, fk_id_type_token: tokenInWhiteList.fk_id_type_token })
       await User.update({ password: hashedPassword, updatedAt: now }, { where: { id: user.id } })
     })
 
