@@ -3,7 +3,7 @@ import { JWT_SECRET, NODE_ENV } from '../config/config.js'
 import { HttpError } from '../utils/customErrors.js'
 import User from '../models/user.model.js'
 
-export const refreshTokenController = async (req, res) => {
+export const refreshAccessTokenController = async (req, res) => {
   try {
     const refreshToken = req.cookies.refresh_token
     if (!refreshToken) throw new HttpError('Refresh token not provided', 404)

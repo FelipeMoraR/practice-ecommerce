@@ -9,22 +9,23 @@ import TokenWhiteList from '../models/tokenWhiteList.model.js'
 import TokenBlackList from '../models/tokenBlackList.model.js'
 import { randomBytes } from 'crypto'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
-// FIXME hash all the tokens
+
 // TODO Generate test for all controllers.
 
 // NOTE Handlers
-const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, endpointConfirmEmail, expiredIn, customToken) => {
+const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, customEndpoint, expiredIn, customToken) => {
   const verifyToken = jwt.sign(
     { id: idUser },
     JWT_SECRET,
     { expiresIn: expiredIn }
   )
 
-  const endpointComplete = endpointConfirmEmail + verifyToken
+  const endpointComplete = customEndpoint + verifyToken
 
   await sendEmail(emailUser, endpointComplete, nameUser, lastNameUser)
 }
 
+// ANCHOR Example of raw db query
 const handlerExtractUtcTimestamp = async () => {
   const [result] = await sqDb.query('SELECT UTC_TIMESTAMP();') // NOTE With this i verify we are using the same time as sequelize configuration (Coordinated Universal Time)
   const now = result[0]['UTC_TIMESTAMP()']
@@ -53,7 +54,7 @@ export const loginUserController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
+        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
@@ -68,9 +69,9 @@ export const loginUserController = async (req, res) => {
         {
           expiresIn: '10m'
         })
-
+      const idRefreshToken = crypto.randomUUID()
       const refreshToken = jwt.sign(
-        { id: user.id },
+        { id: user.id, jti: idRefreshToken },
         JWT_SECRET,
         {
           expiresIn: '7d'
@@ -78,16 +79,15 @@ export const loginUserController = async (req, res) => {
 
       // NOTE Saving token in white list
       const dataRefreshToken = jwt.decode(refreshToken)
-      if (!dataRefreshToken) throw new HttpError('Token is not valid or not have a expiration date', 500)
-      const idRefreshToken = crypto.randomUUID()
       const expRefreshToken = new Date(dataRefreshToken.exp * 1000)
+
       // NOTE type 2 is for refresh token
       await TokenWhiteList.create({ id: idRefreshToken, token: refreshToken, expDate: expRefreshToken, fk_id_user: user.id, fk_id_type_token: 2 })
 
       return { accessToken, refreshToken, isVerified: user.isVerified }
     })
 
-    if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Wait a while, email was sended...' })
+    if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Email has to be verified but an email was already sended. Wait a while...' })
     if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
 
     return res
@@ -114,7 +114,7 @@ export const loginUserController = async (req, res) => {
 
 export const registerUserController = async (req, res) => {
   try {
-    const user = await sqDb.transaction(async () => {
+    await sqDb.transaction(async () => {
       // NOTE Prev validations
       const { email, password, name, lastName } = req.body
       const userExist = await User.findOne({ where: { email } })
@@ -126,13 +126,12 @@ export const registerUserController = async (req, res) => {
       const newUser = await User.create({ id, email, password: hashedPassword, name, lastName, fk_id_type_user: 2 })
 
       // NOTE Generate token, endpoint and sending email
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
+      // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
-
-      return newUser
     })
 
-    return res.status(200).send({ status: 200, message: 'User Created!!!', data: { idUser: user.id } })
+    return res.status(200).send({ status: 200, message: 'User Created!!!' })
   } catch (error) {
     // NOTE Dont send all the info of error.
     console.error('registerUserController::: ', error)
@@ -143,19 +142,18 @@ export const registerUserController = async (req, res) => {
   }
 }
 
-// FIXME
+// ANCHOR This return a 401 be carefull
 export const logoutUserController = async (req, res) => {
   try {
-    sqDb.transaction(async () => {
+    await sqDb.transaction(async () => {
       const cookieRefreshTokenBrowser = req.cookies.refresh_token
-      console.log('refresh token from browser: ', cookieRefreshTokenBrowser)
-      if (!cookieRefreshTokenBrowser) throw new Error('No cookie provided')
-      const tokenIsValid = await TokenWhiteList.findOne({ where: { token: cookieRefreshTokenBrowser } })
-      if (!tokenIsValid) throw new Error('Token not exist in white list')
-      await TokenWhiteList.destroy({ where: { token: cookieRefreshTokenBrowser } })
+      if (!cookieRefreshTokenBrowser) throw new HttpError('No cookie provided', 404)
+      const tokenData = jwt.decode(cookieRefreshTokenBrowser)
+      const tokenIsValid = await TokenWhiteList.findByPk(tokenData.jti)
+      if (!tokenIsValid) throw new HttpError('Token not exist in white list', 401)
+      await TokenWhiteList.destroy({ where: { id: tokenData.jti } })
 
       // NOTE saving token in blackList
-      const tokenData = jwt.decode(cookieRefreshTokenBrowser)
       const expDateToken = new Date(tokenData.exp * 1000)
       const idNewBlackListToken = crypto.randomUUID()
       await TokenBlackList.create({ id: idNewBlackListToken, token: cookieRefreshTokenBrowser, expDate: expDateToken, fk_id_user: tokenData.id, fk_id_type_token: 2 })
@@ -167,6 +165,7 @@ export const logoutUserController = async (req, res) => {
       .send({ status: 200, message: 'Logout successful' })
   } catch (error) {
     console.error('logoutUserController::: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
@@ -176,12 +175,12 @@ export const confirmEmailVerificationController = async (req, res) => {
   try {
     const statusVerification = await sqDb.transaction(async () => {
       // NOTE Token validation
-      const token = req.params.emailToken
+      const { token } = req.body
       if (!token) throw new HttpError('Token not finded', 404)
 
       // NOTE User validation
       const data = jwt.verify(token, JWT_SECRET)
-      const user = await User.findOne({ where: { id: data.id } })
+      const user = await User.findByPk(data.id)
       if (!user) throw new HttpError('User not finded', 404)
       if (user.isVerified) return 304
 
@@ -225,7 +224,7 @@ export const sendEmailVerificationController = async (req, res) => {
       }
 
       // NOTE Sending email
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
       await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: userId } })
@@ -254,20 +253,20 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Email verify spam controll
       // NOTE Remember user has to be verified to use the forgot password controller
-      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) throw new HttpError('Email verify user was already sended, wait a moment...', 403)
+      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) throw new HttpError('The email to verify user was already sended, wait a moment...', 403)
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/api/v1/users/confirm-email/'
+        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
         await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: user.id } })
 
-        return { status: 200, message: 'Email verify user sended' }
+        return { status: 200, message: 'The email to verify user was sended' }
       }
 
       // NOTE Spam controll
-      if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) throw new HttpError('Email verify forgot password was already sended, wait a moment', 403)
+      if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) throw new HttpError('The email to verify the forgot password was already sended, wait a moment...', 403)
 
       // NOTE Unvalidating all old reset password tokens
       const allOldTokens = await TokenWhiteList.findAll({ where: { fk_id_user: user.id, fk_id_type_token: 1 } })
@@ -302,12 +301,12 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email
       // TODO This has to be send to the update password form
-      const endpoint = process.env.CUSTOM_DOMAIN + '/front-view/reste-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
+      const endpoint = process.env.CUSTOM_DOMAIN + '/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
       await sendEmail(user.email, endpoint, user.name, user.lastName)
 
       await User.update({ lastForgotPasswordSentAt: now, updateAt: now }, { where: { id: user.id } })
 
-      return { status: 200, message: 'Email verify forgot password sended' }
+      return { status: 200, message: 'The email to verify the forgot password was sended' }
     })
 
     return res.status(dataStatus.status).send({ status: dataStatus.status, message: dataStatus.message })
@@ -318,7 +317,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
   }
 }
 
-// FIXME THIS IN THE FRONT MAYBE HAVE PROBLEMS WITH THE INTERCEPTOR
+// ANCHOR This return a 401 be carefull
 export const changePasswordController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
@@ -363,21 +362,5 @@ export const changePasswordController = async (req, res) => {
     if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
-  }
-}
-
-// NOTE Protected route
-// TODO Update this
-export const protectedRoute = (req, res) => {
-  // NOTE JWT ayuda con la seguridad en la interaccion entre 2 partes, se divide en 3 partes: header, payload y signature, permite autenticacion de estado.
-  const token = req.cookies.access_token
-
-  if (!token) return res.status(401).send('Access not authorized')
-
-  try {
-    const data = jwt.verify(token, JWT_SECRET)
-    return res.status(200).send({ status: 200, data })
-  } catch (error) {
-    return res.status(500).send('Internal server error:')
   }
 }

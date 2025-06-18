@@ -106,8 +106,8 @@ export const userIdSchema = z.object({
 })
 
 export const changePasswordSchema = z.object({
-  token: z.string().min(1, 'token is required'),
-  secret: z.string().min(1, 'secret is required'),
+  token: z.string().min(1, 'Token is required'),
+  secret: z.string().min(1, 'Secret is required'),
   newPassword: z.string().min(1, 'New password is required').length(9, 'New password must have 9 characters'),
   confirmNewPassword: z.string().min(1, 'Confirm new password is required').length(9, 'Confirm new password must have 9 characters')
 })
@@ -154,3 +154,7 @@ export const changePasswordSchema = z.object({
       })
     }
   })
+
+export const tokenSchema = z.object({
+  token: z.string().min(1, 'Token is required')
+})
