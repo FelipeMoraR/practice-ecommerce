@@ -11,6 +11,7 @@ import { randomBytes } from 'crypto'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // TODO Generate test for all controllers.
+// TODO Generate a schron to controll the token on whitelist
 
 // NOTE Handlers
 const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, customEndpoint, expiredIn, customToken) => {
@@ -364,3 +365,5 @@ export const changePasswordController = async (req, res) => {
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
+
+// NOTE Profile crud
