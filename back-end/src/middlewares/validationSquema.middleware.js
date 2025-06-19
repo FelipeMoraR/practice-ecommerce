@@ -8,6 +8,7 @@ export const validateSquema = (schema) => {
 
       if (!result.success) {
         const errors = result.error.errors
+        console.log(errors)
         const formatedErrors = errors.reduce((acc, error) => {
           if (!error.message || !error.path) return acc
           const nameError = error.path[0]

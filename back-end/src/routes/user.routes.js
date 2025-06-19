@@ -6,15 +6,27 @@ import {
   confirmEmailVerificationController,
   sendEmailVerificationController,
   sendForgotPasswordEmailController,
-  changePasswordController
+  changePasswordController,
+  updateUserAddressController,
+  updateUserPhoneController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validationSquema.middleware.js'
 import { privateRoute } from '../middlewares/protectedRoute.middleware.js'
-import { loginSchema, registerSchema, emailSchema, userIdSchema, changePasswordSchema, tokenSchema } from '../squemas/user.squema.js'
+import {
+  loginSchema,
+  registerSchema,
+  emailSchema,
+  userIdSchema,
+  changePasswordSchema, tokenSchema,
+  updateAddressUser,
+  updatePhoneUser
+} from '../squemas/user.squema.js'
 
 const UserRouter = express.Router()
 
-// ANCHOR GET
+// SECTION GET
+// ANCHOR Public get
+// ANCHOR Private get
 UserRouter.get('/test-protected', privateRoute, (req, res) => {
   try {
     console.log(req.userSession)
@@ -25,7 +37,8 @@ UserRouter.get('/test-protected', privateRoute, (req, res) => {
   }
 })
 
-// ANCHOR POST
+// SECTION POST
+// ANCHOR Public post
 UserRouter.post('/login', validateSquema(loginSchema), loginUserController)
 UserRouter.post('/register', validateSquema(registerSchema), registerUserController)
 UserRouter.post('/logout', logoutUserController)
@@ -33,5 +46,9 @@ UserRouter.post('/confirm-email', validateSquema(tokenSchema), confirmEmailVerif
 UserRouter.post('/resend-email-verification', validateSquema(userIdSchema), sendEmailVerificationController)
 UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema), sendForgotPasswordEmailController)
 UserRouter.post('/update-password', validateSquema(changePasswordSchema), changePasswordController)
+
+// ANCHOR Private post
+UserRouter.post('/update-user-address', privateRoute, validateSquema(updateAddressUser), updateUserAddressController)
+UserRouter.post('/update-user-phone', privateRoute, validateSquema(updatePhoneUser), updateUserPhoneController)
 
 export default UserRouter

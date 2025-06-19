@@ -7,6 +7,9 @@ import { sqDb } from '../config/db.config.js'
 import User from '../models/user.model.js'
 import TokenWhiteList from '../models/tokenWhiteList.model.js'
 import TokenBlackList from '../models/tokenBlackList.model.js'
+import UserAddress from '../models/userAddress.module.js'
+import Address from '../models/address.model.js'
+import Commune from '../models/commune.model.js'
 import { randomBytes } from 'crypto'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
@@ -280,7 +283,6 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       }
       // NOTE Saving a new one
       const idResetTokenWhiteList = crypto.randomUUID()
-      console.log('idResetTokenWhiteList => ', idResetTokenWhiteList)
       const passwordResetTokenJwt = jwt.sign(
         { id: user.id, jti: idResetTokenWhiteList, type: 'passwordReset' },
         JWT_SECRET,
@@ -366,4 +368,59 @@ export const changePasswordController = async (req, res) => {
   }
 }
 
-// NOTE Profile crud
+// NOTE Profile
+export const updateUserAddressController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+      const { id: idUser } = req.userSession
+      if (!idUser) throw new HttpError('Id user not provided', 404)
+
+      const user = await User.findByPk(idUser)
+      if (!user) throw new HttpError('User not finded', 404)
+
+      const { street, number, numDpto, idCommune } = req.body
+      const comunneExist = await Commune.findByPk(idCommune)
+      if (!comunneExist) throw new HttpError('Commune not exist in table', 404)
+      const userHasAddress = await UserAddress.findOne({ where: { fk_id_user: idUser } })
+      const idAddress = crypto.randomUUID()
+      if (userHasAddress) {
+        console.log('User already had an address')
+        await Address.update({ street, number, numDpto, fk_id_commune: idCommune }, { where: { id: userHasAddress.fk_id_address } })
+      } else {
+        console.log('User doesnt have an address, creating a new one...')
+        const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, fk_id_commune: idCommune })
+        console.log('newUserAddress => ', newUserAddress)
+        const newNameUserAddress = user.name + 'Address'
+        await UserAddress.create({ name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })
+      }
+    })
+
+    return res.status(200).send({ status: 200, message: 'User address updated!!!' })
+  } catch (error) {
+    console.log('updateUserAddressController: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const updateUserPhoneController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+      const { id: idUser } = req.userSession
+      if (!idUser) throw new HttpError('Id user not provided', 404)
+
+      const user = await User.findByPk(idUser)
+      if (!user) throw new HttpError('User not finded', 404)
+
+      const { phone } = req.body
+
+      await User.update({ phone }, { where: { id: idUser } })
+    })
+
+    return res.status(200).send({ status: 200, message: 'Phone user updated' })
+  } catch (error) {
+    console.log('UpdateUserPhone: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
