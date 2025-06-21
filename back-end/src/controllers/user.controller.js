@@ -39,6 +39,18 @@ const handlerExtractUtcTimestamp = async () => {
   return now
 }
 
+const handlerGetPostalCode = async (street, number, comune) => {
+  // eslint-disable-next-line quotes
+  try {
+    const postalCode = await fetch(`https://api.pudupostal.com/v1/postal?direccion=${street}&comuna=${comune}&numero=${number}`)
+    const result = await postalCode.json()
+    return result
+  } catch (error) {
+    console.log('handlerGetPostalCode: ', error.status)
+    return null
+  }
+}
+
 // NOTE Basic login logic
 export const loginUserController = async (req, res) => {
   try {
@@ -378,18 +390,30 @@ export const updateUserAddressController = async (req, res) => {
       const user = await User.findByPk(idUser)
       if (!user) throw new HttpError('User not finded', 404)
 
-      const { street, number, numDpto, idCommune } = req.body
+      const { street, number, numDpto, postalCode, idCommune } = req.body
+
       const comunneExist = await Commune.findByPk(idCommune)
       if (!comunneExist) throw new HttpError('Commune not exist in table', 404)
+
+      const postalCodeResponse = await handlerGetPostalCode(street, number, comunneExist.name)
+
+      if (!postalCodeResponse || postalCodeResponse.status) {
+        const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
+        const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+        throw new HttpError(errorMessage, errorStatus)
+      }
+
+      if (postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
+
       const userHasAddress = await UserAddress.findOne({ where: { fk_id_user: idUser } })
       const idAddress = crypto.randomUUID()
       if (userHasAddress) {
         console.log('User already had an address')
         const now = await handlerExtractUtcTimestamp()
-        await Address.update({ street, number, numDpto, fk_id_commune: idCommune, updateAt: now }, { where: { id: userHasAddress.fk_id_address } })
+        await Address.update({ street, number, numDpto, postalCode, fk_id_commune: idCommune, updateAt: now }, { where: { id: userHasAddress.fk_id_address } })
       } else {
         console.log('User doesnt have an address, creating a new one...')
-        const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, fk_id_commune: idCommune })
+        const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, postalCode, fk_id_commune: idCommune })
         const newNameUserAddress = user.name + 'Address'
         const newIdForUserAdress = crypto.randomUUID()
         await UserAddress.create({ id: newIdForUserAdress, name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })

@@ -19,6 +19,10 @@ export async function up (queryInterface, Sequelize) {
       type: Sequelize.INTEGER,
       allowNull: true
     },
+    postalCode: {
+      type: Sequelize.INTEGER,
+      allowNull: false
+    },
     fk_id_commune: {
       type: Sequelize.INTEGER,
       allowNull: false,

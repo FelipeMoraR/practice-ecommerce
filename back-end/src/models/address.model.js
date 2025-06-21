@@ -19,6 +19,10 @@ const Address = sqDb.define('address', {
     type: DataTypes.INTEGER,
     allowNull: true
   },
+  postalCode: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
   fk_id_commune: {
     type: DataTypes.INTEGER,
     allowNull: false
