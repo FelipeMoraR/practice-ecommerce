@@ -5,11 +5,11 @@ import Address from './address.model.js'
 
 const UserAddress = sqDb.define('useraddress', {
   id: {
-    type: DataTypes.INTEGER,
+    type: DataTypes.STRING(36),
     primaryKey: true
   },
   name: {
-    type: DataTypes.STRING(40),
+    type: DataTypes.STRING(60),
     allowNull: false
   },
   fk_id_user: {

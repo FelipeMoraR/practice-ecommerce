@@ -4,11 +4,11 @@
 export async function up (queryInterface, Sequelize) {
   await queryInterface.createTable('useraddress', {
     id: {
-      type: Sequelize.INTEGER,
+      type: Sequelize.STRING(36),
       primaryKey: true
     },
     name: {
-      type: Sequelize.STRING(40),
+      type: Sequelize.STRING(60),
       allowNull: false
     },
     fk_id_user: {

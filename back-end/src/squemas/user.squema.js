@@ -162,7 +162,7 @@ export const tokenSchema = z.object({
 export const updateAddressUser = z.object({
   street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100'),
   number: z.number().min(1, 'Number is required'),
-  numDpto: z.number().min(1, 'NumDpto is required'),
+  numDpto: z.number().min(0, 'NumDpto is required'),
   idCommune: z.number().min(1, 'idCommune is required')
 })
 

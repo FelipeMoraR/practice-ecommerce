@@ -368,7 +368,7 @@ export const changePasswordController = async (req, res) => {
   }
 }
 
-// NOTE Profile
+// NOTE User data
 export const updateUserAddressController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
@@ -385,13 +385,14 @@ export const updateUserAddressController = async (req, res) => {
       const idAddress = crypto.randomUUID()
       if (userHasAddress) {
         console.log('User already had an address')
-        await Address.update({ street, number, numDpto, fk_id_commune: idCommune }, { where: { id: userHasAddress.fk_id_address } })
+        const now = await handlerExtractUtcTimestamp()
+        await Address.update({ street, number, numDpto, fk_id_commune: idCommune, updateAt: now }, { where: { id: userHasAddress.fk_id_address } })
       } else {
         console.log('User doesnt have an address, creating a new one...')
         const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, fk_id_commune: idCommune })
-        console.log('newUserAddress => ', newUserAddress)
         const newNameUserAddress = user.name + 'Address'
-        await UserAddress.create({ name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })
+        const newIdForUserAdress = crypto.randomUUID()
+        await UserAddress.create({ id: newIdForUserAdress, name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })
       }
     })
 
