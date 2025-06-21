@@ -167,5 +167,5 @@ export const updateAddressUser = z.object({
 })
 
 export const updatePhoneUser = z.object({
-  phone: z.string().min(1, 'Phone is required')
+  phone: z.string().length(8, 'Phone must have 8 digits').regex(/^\d+$/, 'Phone number must contain only digits').transform(Number)
 })
