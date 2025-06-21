@@ -6,6 +6,7 @@ import AddressRouter from './src/routes/address.router.js'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
+import { testNodeCron, tokenBlackListCleaner } from './src/services/cron.service.js'
 
 const app = express()
 const corsOptions = {
@@ -40,5 +41,9 @@ app.use((err, req, res, next) => {
   console.error('Unhandled error: ', err)
   return res.status(500).send({ error: 'Internal server error' })
 })
+
+// NOTE Activating node-cron
+testNodeCron()
+tokenBlackListCleaner()
 
 export default app

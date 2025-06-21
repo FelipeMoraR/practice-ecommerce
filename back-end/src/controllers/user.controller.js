@@ -5,6 +5,7 @@ import { HttpError } from '../utils/customErrors.js'
 import sendEmail from '../utils/sendEmail.js'
 import { sqDb } from '../config/db.config.js'
 import User from '../models/user.model.js'
+import handlerExtractUtcTimestamp from '../utils/extractUtcTimeStamp.js'
 import TokenWhiteList from '../models/tokenWhiteList.model.js'
 import TokenBlackList from '../models/tokenBlackList.model.js'
 import UserAddress from '../models/userAddress.module.js'
@@ -27,16 +28,6 @@ const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastName
   const endpointComplete = customEndpoint + verifyToken
 
   await sendEmail(emailUser, endpointComplete, nameUser, lastNameUser)
-}
-
-// ANCHOR Example of raw db query
-const handlerExtractUtcTimestamp = async () => {
-  const [result] = await sqDb.query('SELECT UTC_TIMESTAMP();') // NOTE With this i verify we are using the same time as sequelize configuration (Coordinated Universal Time)
-  const now = result[0]['UTC_TIMESTAMP()']
-
-  if (!now) throw new Error('Couldnt extract the time')
-
-  return now
 }
 
 const handlerGetPostalCode = async (street, number, comune) => {
