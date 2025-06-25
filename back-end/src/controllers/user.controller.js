@@ -15,7 +15,7 @@ import { randomBytes } from 'crypto'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // TODO Generate test for all controllers.
-// TODO Generate a schron to controll the token on whitelist
+// TODO Generate logger db and controllers
 
 // NOTE Handlers
 const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, customEndpoint, expiredIn, customToken) => {
@@ -437,6 +437,80 @@ export const updateUserPhoneController = async (req, res) => {
   } catch (error) {
     console.log('UpdateUserPhone: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+// NOTE Admin basic crud
+export const getAllClientsController = async (req, res) => {
+  try {
+    const { page = 0, size = 10 } = req.query
+    const result = await sqDb.transaction(async () => {
+      // NOTE Just clients
+      const { count, rows } = await User.findAndCountAll({ limit: Number(size), offset: Number(page) * Number(size) })
+      return { count, rows }
+    })
+
+    if (result.count <= 0) throw new HttpError('No users in the table', 404)
+    // NOTE This return an array of promise because the callback is async
+    const usersParsedPromises = result.rows.map(async (user) => {
+      const newUserToSave = { id: user.id, email: user.email, name: user.name, lastName: user.lastName, phone: user.phone, street: null, number: null, numDpto: 0, postalCode: null, commune: null }
+
+      const userHaveAddress = await UserAddress.findOne({ where: { fk_id_user: user.id } }) // Added `where` for consistency
+
+      if (userHaveAddress) { // Only fetch address if user has one
+        const addressDataUser = await Address.findByPk(userHaveAddress.fk_id_address)
+        if (addressDataUser) {
+          newUserToSave.street = addressDataUser.street
+          newUserToSave.number = addressDataUser.number
+          newUserToSave.numDpto = addressDataUser.numDpto
+          newUserToSave.postalCode = addressDataUser.postalCode
+
+          const communeUser = await Commune.findByPk(addressDataUser.fk_id_commune)
+          if (communeUser) {
+            newUserToSave.commune = communeUser.name
+          }
+        }
+      }
+      return newUserToSave
+    })
+
+    const usersParsed = await Promise.all(usersParsedPromises)
+
+    console.log('usersParsedPromises => ', usersParsedPromises)
+    return res.status(200).send({ status: 200, data: usersParsed, count: result.count, size, page: page * size })
+  } catch (error) {
+    console.log('getAllClientsController: ', error)
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const createClientController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+
+    })
+  } catch (error) {
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const deleteClientController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+
+    })
+  } catch (error) {
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const updateClientController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+
+    })
+  } catch (error) {
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }

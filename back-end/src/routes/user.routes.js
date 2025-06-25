@@ -8,10 +8,11 @@ import {
   sendForgotPasswordEmailController,
   changePasswordController,
   updateUserAddressController,
-  updateUserPhoneController
+  updateUserPhoneController,
+  getAllClientsController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validationSquema.middleware.js'
-import { privateRoute } from '../middlewares/protectedRoute.middleware.js'
+import { privateRoute, adminRoute } from '../middlewares/protectedRoute.middleware.js'
 import {
   loginSchema,
   registerSchema,
@@ -36,6 +37,16 @@ UserRouter.get('/test-protected', privateRoute, (req, res) => {
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 })
+
+UserRouter.get('/test-admin-protected', privateRoute, adminRoute, (req, res) => {
+  try {
+    return res.status(200).send({ status: 200, message: 'Ok!' })
+  } catch (error) {
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+})
+
+UserRouter.get('/get-all-client', privateRoute, adminRoute, getAllClientsController)
 
 // SECTION POST
 // ANCHOR Public post
