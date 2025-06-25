@@ -444,41 +444,54 @@ export const updateUserPhoneController = async (req, res) => {
 // NOTE Admin basic crud
 export const getAllClientsController = async (req, res) => {
   try {
-    const { page = 0, size = 10 } = req.query
-    const result = await sqDb.transaction(async () => {
+    // [Op.like]: '%hat'
+    const { page = 0, size = 10, search = '', order = 'desc' } = req.query
+    const whereUserConfig = { fk_id_type_user: 1 }
+    const config = { where: whereUserConfig, limit: Number(size), offset: Number(page) * Number(size) }
+    const resultUser = await sqDb.transaction(async () => {
       // NOTE Just clients
-      const { count, rows } = await User.findAndCountAll({ limit: Number(size), offset: Number(page) * Number(size) })
+      const { count, rows } = await User.findAndCountAll(config)
       return { count, rows }
     })
 
-    if (result.count <= 0) throw new HttpError('No users in the table', 404)
-    // NOTE This return an array of promise because the callback is async
-    const usersParsedPromises = result.rows.map(async (user) => {
-      const newUserToSave = { id: user.id, email: user.email, name: user.name, lastName: user.lastName, phone: user.phone, street: null, number: null, numDpto: 0, postalCode: null, commune: null }
+    const resultUserInclude = await sqDb.transaction(async () => {
+      // NOTE Just clients
+      const { count, rows } = await User.findAndCountAll({ include: [{ model: UserAddress, include: [{ model: Address, include: [{ model: Commune }] }] }] })
+      return { count, rows }
+    })
+    console.log('algo')
+    console.log(resultUserInclude.rows[0].useraddresses[0])
 
-      const userHaveAddress = await UserAddress.findOne({ where: { fk_id_user: user.id } }) // Added `where` for consistency
+    // FIXME N+1 Query Problem
+    const usersParsed = await sqDb.transaction(async () => {
+      if (resultUser.count <= 0) throw new HttpError('No users in the table', 404)
+      // NOTE This return an array of promise because the callback is async
+      const usersParsedPromises = resultUser.rows.map(async (user) => {
+        const newUserToSave = { id: user.id, email: user.email, name: user.name, lastName: user.lastName, phone: user.phone, street: null, number: null, numDpto: 0, postalCode: null, commune: null }
 
-      if (userHaveAddress) { // Only fetch address if user has one
-        const addressDataUser = await Address.findByPk(userHaveAddress.fk_id_address)
-        if (addressDataUser) {
-          newUserToSave.street = addressDataUser.street
-          newUserToSave.number = addressDataUser.number
-          newUserToSave.numDpto = addressDataUser.numDpto
-          newUserToSave.postalCode = addressDataUser.postalCode
+        const userHaveAddress = await UserAddress.findOne({ where: { fk_id_user: user.id } }) // Added `where` for consistency
+        if (userHaveAddress) { // Only fetch address if user has one
+          const addressDataUser = await Address.findByPk(userHaveAddress.fk_id_address)
+          if (addressDataUser) {
+            newUserToSave.street = addressDataUser.street
+            newUserToSave.number = addressDataUser.number
+            newUserToSave.numDpto = addressDataUser.numDpto
+            newUserToSave.postalCode = addressDataUser.postalCode
 
-          const communeUser = await Commune.findByPk(addressDataUser.fk_id_commune)
-          if (communeUser) {
-            newUserToSave.commune = communeUser.name
+            const communeUser = await Commune.findByPk(addressDataUser.fk_id_commune)
+            if (communeUser) {
+              newUserToSave.commune = communeUser.name
+            }
           }
         }
-      }
-      return newUserToSave
+        return newUserToSave
+      })
+
+      const usersParsed = await Promise.all(usersParsedPromises)
+      return usersParsed
     })
 
-    const usersParsed = await Promise.all(usersParsedPromises)
-
-    console.log('usersParsedPromises => ', usersParsedPromises)
-    return res.status(200).send({ status: 200, data: usersParsed, count: result.count, size, page: page * size })
+    return res.status(200).send({ status: 200, data: usersParsed, count: resultUser.count, size, page: page * size })
   } catch (error) {
     console.log('getAllClientsController: ', error)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
