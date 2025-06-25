@@ -74,7 +74,7 @@ export const registerSchema = z.object({
 
     if (!regexOnlyLetter.test(data.name)) {
       context.addIssue({
-        message: 'Values not valid, use just letters',
+        message: 'Values not valid in name, use just letters',
         path: ['name'],
         code: z.ZodIssueCode.custom
       })
@@ -84,7 +84,7 @@ export const registerSchema = z.object({
 
     if (!regexOnlyLetter.test(data.lastName)) {
       context.addIssue({
-        message: '',
+        message: 'Values not valid in last name, use just letters',
         path: ['lastName'],
         code: z.ZodIssueCode.custom
       })

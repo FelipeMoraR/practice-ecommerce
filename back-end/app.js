@@ -6,7 +6,7 @@ import AddressRouter from './src/routes/address.router.js'
 import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
-import { testNodeCron, tokenBlackListCleaner } from './src/services/cron.service.js'
+import { tokenBlackListCleaner, tokenWhiteListCleaner } from './src/services/cron.service.js'
 
 const app = express()
 const corsOptions = {
@@ -43,7 +43,7 @@ app.use((err, req, res, next) => {
 })
 
 // NOTE Activating node-cron
-testNodeCron()
 tokenBlackListCleaner()
+tokenWhiteListCleaner()
 
 export default app

@@ -1,6 +1,7 @@
 import jwt from 'jsonwebtoken'
 import { JWT_SECRET, NODE_ENV } from '../config/config.js'
 import { HttpError } from '../utils/customErrors.js'
+import TokenBlackList from '../models/tokenBlackList.model.js'
 import User from '../models/user.model.js'
 
 export const refreshAccessTokenController = async (req, res) => {
@@ -11,8 +12,10 @@ export const refreshAccessTokenController = async (req, res) => {
     const tokenValid = jwt.verify(refreshToken, JWT_SECRET)
     if (!tokenValid) throw new HttpError('Invalid refresh token', 406)
 
-    const user = await User.findOne({ where: { id: tokenValid.id } })
+    const tokenIsBanned = await TokenBlackList.findOne({ where: { token: refreshToken } })
+    if (tokenIsBanned) throw new HttpError('Token is banned, please retry login', 401)
 
+    const user = await User.findOne({ where: { id: tokenValid.id } })
     if (!user) throw new HttpError('User not finded', 404)
 
     const accessToken = jwt.sign(
