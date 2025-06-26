@@ -1,3 +1,4 @@
+/* eslint-disable quotes */
 import jwt from 'jsonwebtoken'
 import { JWT_SECRET, NODE_ENV, SALT_ROUNDS } from '../config/config.js'
 import bcrypt from 'bcrypt'
@@ -12,6 +13,7 @@ import UserAddress from '../models/userAddress.module.js'
 import Address from '../models/address.model.js'
 import Commune from '../models/commune.model.js'
 import { randomBytes } from 'crypto'
+import { Op } from 'sequelize'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // TODO Generate test for all controllers.
@@ -372,6 +374,7 @@ export const changePasswordController = async (req, res) => {
 }
 
 // NOTE User data
+// FIXME An user can has more than one address
 export const updateUserAddressController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
@@ -445,53 +448,63 @@ export const updateUserPhoneController = async (req, res) => {
 export const getAllClientsController = async (req, res) => {
   try {
     // [Op.like]: '%hat'
-    const { page = 0, size = 10, search = '', order = 'desc' } = req.query
-    const whereUserConfig = { fk_id_type_user: 1 }
-    const config = { where: whereUserConfig, limit: Number(size), offset: Number(page) * Number(size) }
+    const { page = 0, size = 10, search = '', order = 'asc(name)' } = req.query
+    const searchSpaces = search.split(' ')
+
+    let searchConfig = {}
+    if (searchSpaces.length > 1) {
+      const andConfig = [
+        { name: { [Op.like]: `%${searchSpaces[0]}%` } },
+        { lastName: { [Op.like]: `%${searchSpaces[1]}%` } }
+      ]
+      searchConfig = { [Op.and]: andConfig }
+    }
+
+    if (searchSpaces.length === 1 && search !== '') {
+      const orConfig = [
+        { name: { [Op.regexp]: `.*${search}.*` } },
+        { lastName: { [Op.regexp]: `.*${search}.*` } }
+      ]
+
+      searchConfig = { [Op.or]: orConfig }
+    }
+
+    const sort = [['name', 'ASC']]
+
+    if (order !== 'asc(name)') {
+      const test = order.split(',').map(el => {
+        if (el.includes('asc')) return ['', 'ASC']
+        if (el.includes('desc')) return ['', 'DESC']
+
+        return null
+      }).filter(el => el !== null)
+      console.log(test)
+    }
+
+    const whereUserConfig = { [Op.and]: [{ fk_id_type_user: 2 }, search !== '' ? searchConfig : {}] }
+    const includeConfig = [{ model: UserAddress, include: [{ model: Address, include: [{ model: Commune }] }] }]
+    const config = { where: whereUserConfig, include: includeConfig, limit: Number(size), offset: Number(page) * Number(size), order: sort }
     const resultUser = await sqDb.transaction(async () => {
       // NOTE Just clients
       const { count, rows } = await User.findAndCountAll(config)
       return { count, rows }
     })
+    if (resultUser.count <= 0) return res.status(200).send({ status: 200, data: [], count: resultUser.count, size, page: page * size })
 
-    const resultUserInclude = await sqDb.transaction(async () => {
-      // NOTE Just clients
-      const { count, rows } = await User.findAndCountAll({ include: [{ model: UserAddress, include: [{ model: Address, include: [{ model: Commune }] }] }] })
-      return { count, rows }
-    })
-    console.log('algo')
-    console.log(resultUserInclude.rows[0].useraddresses[0])
+    const dataParsed = resultUser.rows.map(el => {
+      const newUserToSave = { id: el.id, email: el.email, name: el.name, lastname: el.lastName, phone: el.phone, isVerified: el.isVerified, addresses: [] }
+      // TODO Test this with a new user
+      if (!el.useraddresses) return newUserToSave
 
-    // FIXME N+1 Query Problem
-    const usersParsed = await sqDb.transaction(async () => {
-      if (resultUser.count <= 0) throw new HttpError('No users in the table', 404)
-      // NOTE This return an array of promise because the callback is async
-      const usersParsedPromises = resultUser.rows.map(async (user) => {
-        const newUserToSave = { id: user.id, email: user.email, name: user.name, lastName: user.lastName, phone: user.phone, street: null, number: null, numDpto: 0, postalCode: null, commune: null }
-
-        const userHaveAddress = await UserAddress.findOne({ where: { fk_id_user: user.id } }) // Added `where` for consistency
-        if (userHaveAddress) { // Only fetch address if user has one
-          const addressDataUser = await Address.findByPk(userHaveAddress.fk_id_address)
-          if (addressDataUser) {
-            newUserToSave.street = addressDataUser.street
-            newUserToSave.number = addressDataUser.number
-            newUserToSave.numDpto = addressDataUser.numDpto
-            newUserToSave.postalCode = addressDataUser.postalCode
-
-            const communeUser = await Commune.findByPk(addressDataUser.fk_id_commune)
-            if (communeUser) {
-              newUserToSave.commune = communeUser.name
-            }
-          }
-        }
-        return newUserToSave
+      const addressesParsed = el.useraddresses.map(addrs => {
+        const addressToSave = { name: addrs.name, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: addrs.address.commune.name }
+        return addressToSave
       })
-
-      const usersParsed = await Promise.all(usersParsedPromises)
-      return usersParsed
+      newUserToSave.addresses = addressesParsed
+      return newUserToSave
     })
 
-    return res.status(200).send({ status: 200, data: usersParsed, count: resultUser.count, size, page: page * size })
+    return res.status(200).send({ status: 200, data: dataParsed, count: resultUser.count, size, page: page * size })
   } catch (error) {
     console.log('getAllClientsController: ', error)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
