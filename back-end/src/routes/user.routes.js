@@ -19,8 +19,9 @@ import {
   emailSchema,
   userIdSchema,
   changePasswordSchema, tokenSchema,
-  updateAddressUser,
-  updatePhoneUser
+  updateAddressUserSchema,
+  updatePhoneUserSchema,
+  getClientsSchema
 } from '../squemas/user.squema.js'
 
 const UserRouter = express.Router()
@@ -46,20 +47,20 @@ UserRouter.get('/test-admin-protected', privateRoute, adminRoute, (req, res) => 
   }
 })
 
-UserRouter.get('/get-all-client', privateRoute, adminRoute, getAllClientsController)
+UserRouter.get('/get-all-client', privateRoute, adminRoute, validateSquema(getClientsSchema, 'query'), getAllClientsController)
 
 // SECTION POST
 // ANCHOR Public post
-UserRouter.post('/login', validateSquema(loginSchema), loginUserController)
-UserRouter.post('/register', validateSquema(registerSchema), registerUserController)
+UserRouter.post('/login', validateSquema(loginSchema, 'body'), loginUserController)
+UserRouter.post('/register', validateSquema(registerSchema, 'body'), registerUserController)
 UserRouter.post('/logout', logoutUserController)
-UserRouter.post('/confirm-email', validateSquema(tokenSchema), confirmEmailVerificationController)
-UserRouter.post('/resend-email-verification', validateSquema(userIdSchema), sendEmailVerificationController)
-UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema), sendForgotPasswordEmailController)
-UserRouter.post('/update-password', validateSquema(changePasswordSchema), changePasswordController)
+UserRouter.post('/confirm-email', validateSquema(tokenSchema, 'body'), confirmEmailVerificationController)
+UserRouter.post('/resend-email-verification', validateSquema(userIdSchema, 'body'), sendEmailVerificationController)
+UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema, 'body'), sendForgotPasswordEmailController)
+UserRouter.post('/update-password', validateSquema(changePasswordSchema, 'body'), changePasswordController)
 
 // ANCHOR Private post
-UserRouter.post('/update-user-address', privateRoute, validateSquema(updateAddressUser), updateUserAddressController)
-UserRouter.post('/update-user-phone', privateRoute, validateSquema(updatePhoneUser), updateUserPhoneController)
+UserRouter.post('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
+UserRouter.post('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
 
 export default UserRouter

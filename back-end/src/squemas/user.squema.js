@@ -1,5 +1,14 @@
 import { z } from 'zod'
-import { regexPassword, regexAtLeastOneNumber, regexAtLeastOneSpecialCharacter, regexAtleastOneLetter, regexOnlyLetter } from '../utils/regex.js'
+import {
+  regexPassword,
+  regexAtLeastOneNumber,
+  regexAtLeastOneSpecialCharacter,
+  regexAtleastOneLetter,
+  regexOnlyLetter,
+  regexOnlyNumbers,
+  regexOnlyLetterAndSpaces,
+  regexOrderQuery
+} from '../utils/regex.js'
 
 const blockedDomains = [
   'mailinator.com',
@@ -159,7 +168,7 @@ export const tokenSchema = z.object({
   token: z.string().min(1, 'Token is required')
 })
 
-export const updateAddressUser = z.object({
+export const updateAddressUserSchema = z.object({
   street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100'),
   number: z.number().min(1, 'Number is required'),
   numDpto: z.number().min(0, 'NumDpto is required'),
@@ -167,6 +176,13 @@ export const updateAddressUser = z.object({
   idCommune: z.number().min(1, 'idCommune is required')
 })
 
-export const updatePhoneUser = z.object({
+export const updatePhoneUserSchema = z.object({
   phone: z.string().length(8, 'Phone must have 8 digits').regex(/^\d+$/, 'Phone number must contain only digits').transform(Number)
+})
+
+export const getClientsSchema = z.object({
+  page: z.string().regex(regexOnlyNumbers, 'Page just accept numbers').optional(),
+  size: z.string().regex(regexOnlyNumbers, 'Size just accept numbers').optional(),
+  search: z.string().regex(regexOnlyLetterAndSpaces, 'Search just accepts letters').optional(),
+  order: z.string().regex(regexOrderQuery, 'Order only accept this format asc|desc(field)').optional()
 })

@@ -3,3 +3,7 @@ export const regexAtLeastOneNumber = /[0-9]/
 export const regexAtLeastOneSpecialCharacter = /[_@#$!¡.-]/
 export const regexAtleastOneLetter = /[a-zA-Z]/
 export const regexOnlyLetter = /^[a-zA-Z]+$/
+export const regexOnlyNumbers = /^[0-9]+$/
+export const regexOnlyLettersAndNumbers = /^[a-zA-Z0-9]+$/
+export const regexOnlyLetterAndSpaces = /^[a-zA-Z ]+$/
+export const regexOrderQuery = /^(asc|desc)\([a-zA-Z_]+\)$/

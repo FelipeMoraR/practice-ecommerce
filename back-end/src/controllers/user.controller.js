@@ -18,6 +18,7 @@ const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // TODO Generate test for all controllers.
 // TODO Generate logger db and controllers
+// TODO User can change some values, but one time per 60 days
 
 // NOTE Handlers
 const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, customEndpoint, expiredIn, customToken) => {
@@ -375,6 +376,7 @@ export const changePasswordController = async (req, res) => {
 
 // NOTE User data
 // FIXME An user can has more than one address
+// FIXME This has a problem of security, take too much time
 export const updateUserAddressController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
@@ -447,7 +449,6 @@ export const updateUserPhoneController = async (req, res) => {
 // NOTE Admin basic crud
 export const getAllClientsController = async (req, res) => {
   try {
-    // [Op.like]: '%hat'
     const { page = 0, size = 10, search = '', order = 'asc(name)' } = req.query
     const searchSpaces = search.split(' ')
 
@@ -469,16 +470,33 @@ export const getAllClientsController = async (req, res) => {
       searchConfig = { [Op.or]: orConfig }
     }
 
-    const sort = [['name', 'ASC']]
+    let sort = [['name', 'ASC']]
 
     if (order !== 'asc(name)') {
-      const test = order.split(',').map(el => {
-        if (el.includes('asc')) return ['', 'ASC']
-        if (el.includes('desc')) return ['', 'DESC']
+      const newOrderSort = order.split(',').map(el => {
+        const first = el.indexOf('(')
+        const second = el.indexOf(')')
 
+        if (first !== -1 && second !== -1) {
+          const field = el.slice(first + 1, second)
+          const direction = el.includes('asc') ? 'ASC' : 'DESC'
+          // ANCHOR When we use the includes in the order statement we have to the specify the column of the tables that we wanna use
+          if (field.includes('userAddressName')) return [{ model: UserAddress }, 'name', direction]
+
+          if (field.includes('street')) return [{ model: UserAddress }, { model: Address }, 'street', direction]
+          if (field.includes('number')) return [{ model: UserAddress }, { model: Address }, 'number', direction]
+          if (field.includes('numDpto')) return [{ model: UserAddress }, { model: Address }, 'numDpto', direction]
+          if (field.includes('postalCode')) return [{ model: UserAddress }, { model: Address }, 'postalCode', direction]
+
+          if (field.includes('communeName')) return [{ model: UserAddress }, { model: Address }, { model: Commune }, 'name', direction]
+
+          return [field, direction]
+        }
         return null
       }).filter(el => el !== null)
-      console.log(test)
+      if (newOrderSort.length > 0) {
+        sort = newOrderSort
+      }
     }
 
     const whereUserConfig = { [Op.and]: [{ fk_id_type_user: 2 }, search !== '' ? searchConfig : {}] }
@@ -489,11 +507,11 @@ export const getAllClientsController = async (req, res) => {
       const { count, rows } = await User.findAndCountAll(config)
       return { count, rows }
     })
-    if (resultUser.count <= 0) return res.status(200).send({ status: 200, data: [], count: resultUser.count, size, page: page * size })
+    if (resultUser.count <= 0) return res.status(200).send({ status: 200, data: [], count: resultUser.count, size: Number(size), page: page * size })
 
     const dataParsed = resultUser.rows.map(el => {
       const newUserToSave = { id: el.id, email: el.email, name: el.name, lastname: el.lastName, phone: el.phone, isVerified: el.isVerified, addresses: [] }
-      // TODO Test this with a new user
+
       if (!el.useraddresses) return newUserToSave
 
       const addressesParsed = el.useraddresses.map(addrs => {
@@ -504,9 +522,10 @@ export const getAllClientsController = async (req, res) => {
       return newUserToSave
     })
 
-    return res.status(200).send({ status: 200, data: dataParsed, count: resultUser.count, size, page: page * size })
+    return res.status(200).send({ status: 200, data: dataParsed, count: resultUser.count, size: Number(size), page: page * size })
   } catch (error) {
     console.log('getAllClientsController: ', error)
+    if (error.parent.errno === 1054) return res.status(400).send({ status: 400, message: 'Bad field error' })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
