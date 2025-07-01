@@ -132,7 +132,7 @@ export const registerUserController = async (req, res) => {
 
       // NOTE Creating user
       const id = crypto.randomUUID()
-      const hashedPassword = bcrypt.hashSync(password, salty)
+      const hashedPassword = await bcrypt.hash(password, salty)
       const newUser = await User.create({ id, email, password: hashedPassword, name, lastName, fk_id_type_user: 2 })
 
       // NOTE Generate token, endpoint and sending email
@@ -297,7 +297,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // TODO Verify if is better use hash or hashSync
       const secretReset = randomBytes(32).toString('hex')
-      const hashedResetToken = bcrypt.hashSync(secretReset, salty)
+      const hashedResetToken = await bcrypt.hash(secretReset, salty)
       const decodeResetTokenJwt = jwt.decode(passwordResetTokenJwt)
 
       await TokenWhiteList.create({
@@ -352,7 +352,7 @@ export const changePasswordController = async (req, res) => {
       if (newPasswordIsNotNew) throw new HttpError('New password have to be new', 422)
 
       // NOTE Creating new password encripted
-      const hashedPassword = bcrypt.hashSync(newPassword, salty)
+      const hashedPassword = await bcrypt.hash(newPassword, salty)
 
       // NOTE Updating password user and invalidating token
       const now = await handlerExtractUtcTimestamp()
@@ -375,6 +375,35 @@ export const changePasswordController = async (req, res) => {
 }
 
 // NOTE User data
+export const viewUserController = async (req, res) => {
+  try {
+    const user = await sqDb.transaction(async () => {
+      const { id } = req.userSession
+      const userInfo = await User.findOne({ include: { model: UserAddress, include: { model: Address, include: { model: Commune } } }, where: { id } })
+      if (!userInfo) throw new HttpError('User not found', 404)
+
+      const userInfoParsed = { email: userInfo.email, name: userInfo.name, lastname: userInfo.lastName, phone: userInfo.phone, isVerified: userInfo.isVerified, addresses: [] }
+
+      if (!userInfo.useraddresses) return userInfoParsed
+
+      const addressesParsed = userInfo.useraddresses.map(addrs => {
+        const addressToSave = { id: addrs.id, name: addrs.name, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: addrs.address.commune.name }
+        return addressToSave
+      })
+
+      userInfoParsed.addresses = addressesParsed
+
+      return userInfoParsed
+    })
+
+    return res.status(200).send({ status: 200, data: user })
+  } catch (error) {
+    console.log('viewUserController: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
 export const addUserAddressController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
@@ -406,7 +435,7 @@ export const addUserAddressController = async (req, res) => {
       if (postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
       const idAddress = crypto.randomUUID()
       const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, postalCode, fk_id_commune: idCommune })
-      const newNameUserAddress = user.name + 'Address' + count
+      const newNameUserAddress = user.name + 'Address'
       const newIdForUserAdress = crypto.randomUUID()
       await UserAddress.create({ id: newIdForUserAdress, name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })
     })
@@ -453,9 +482,7 @@ export const updateUserAddressController = async (req, res) => {
   }
 }
 
-// TODO Create a deleteUserAddress controller
-// FIXME When we delete a address and add a new one the name is not working as we thinked
-export const deleteUserAddress = async (req, res) => {
+export const deleteUserAddressController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
@@ -611,13 +638,23 @@ export const createClientController = async (req, res) => {
 }
 
 // TODO Front has to send a confirmation of the action, like "U sure of deleting this user? This cant ne undone "
-// FIXME Delete address if the user has one, you have to extract the id of all adress linked to that user and destroy it
 export const deleteClientController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
       const userId = req.params.userId
       const userFound = await User.findByPk(userId)
       if (!userFound) throw new HttpError('User not found', 404)
+
+      const userAddresses = await UserAddress.findAll({ where: { fk_id_user: userId } })
+
+      // NOTE User not has address
+      if (userAddresses.length < 1) {
+        await User.destroy({ where: { id: userId } })
+        return
+      }
+
+      const addressPromises = userAddresses.map(el => Address.destroy({ where: { id: el.fk_id_address } }))
+      await Promise.all(addressPromises)
       await User.destroy({ where: { id: userId } })
     })
 
@@ -628,11 +665,34 @@ export const deleteClientController = async (req, res) => {
   }
 }
 
-export const updateClientController = async (req, res) => {
+// NOTE Generate two controllers, one to update address, and other to update only personal info
+export const updateBasicClientInfoController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
+      const { id, email, password, name, lastName, phone, isVerified } = req.body
+      const userExist = await User.findByPk(id)
+      if (!userExist) throw new HttpError('User not found', 404)
 
+      const valuesToUpdate = {}
+      console.log(valuesToUpdate)
+      valuesToUpdate.test = 'test'
+      console.log(valuesToUpdate)
+      // await User.update(valuesToUpdate, { where: { id } })
     })
+
+    return res.status(200).send({ status: 200, message: 'User personal info updated!' })
+  } catch (error) {
+    console.log(error)
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const updateAddressClientInfoController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+    })
+
+    return res.status(200).send({ status: 200, message: 'User address updated!' })
   } catch (error) {
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }

@@ -5,13 +5,6 @@ import TokenWhiteList from '../models/tokenWhiteList.model.js'
 import handlerExtractUtcTimestamp from '../utils/extractUtcTimeStamp.js'
 import { Op } from 'sequelize'
 
-export const testNodeCron = () => {
-  nodeCron.schedule('* * * * *', () => {
-    console.log('Testing cron, every minute i would say hello')
-    console.log('Hello')
-  })
-}
-
 export const tokenBlackListCleaner = () => {
   try {
     // NOTE This will run every Friday at 3:00 AM (0 seconds, 0 minutes, 3 hours) one day of every 3 month
