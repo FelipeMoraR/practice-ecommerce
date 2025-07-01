@@ -55,7 +55,7 @@ export const loginUserController = async (req, res) => {
       // NOTE User verification
       const { email, password } = req.body
       const user = await User.findOne({ where: { email } })
-      if (!user) throw new HttpError('Email not finded', 404)
+      if (!user) throw new HttpError('Email not found', 404)
       const passwordIsValid = bcrypt.compareSync(password, user.password)
       if (!passwordIsValid) throw new HttpError('Invalid password', 403)
 
@@ -186,12 +186,12 @@ export const confirmEmailVerificationController = async (req, res) => {
     const statusVerification = await sqDb.transaction(async () => {
       // NOTE Token validation
       const { token } = req.body
-      if (!token) throw new HttpError('Token not finded', 404)
+      if (!token) throw new HttpError('Token not found', 404)
 
       // NOTE User validation
       const data = jwt.verify(token, JWT_SECRET)
       const user = await User.findByPk(data.id)
-      if (!user) throw new HttpError('User not finded', 404)
+      if (!user) throw new HttpError('User not found', 404)
       if (user.isVerified) return 304
 
       // NOTE Extract the actual time
@@ -225,7 +225,7 @@ export const sendEmailVerificationController = async (req, res) => {
       // NOTE User validation
       const { userId } = req.body
       const user = await User.findOne({ where: { id: userId } })
-      if (!user) throw new HttpError('User not finded', 404)
+      if (!user) throw new HttpError('User not found', 404)
       if (user.isVerified) return 204
 
       // NOTE Spam controll
@@ -259,7 +259,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       // NOTE Finding user
       const { email } = req.body
       const user = await User.findOne({ where: { email } })
-      if (!user) throw new HttpError('User not finded', 404)
+      if (!user) throw new HttpError('User not found', 404)
 
       // NOTE Email verify spam controll
       // NOTE Remember user has to be verified to use the forgot password controller
@@ -384,7 +384,7 @@ export const updateUserAddressController = async (req, res) => {
       if (!idUser) throw new HttpError('Id user not provided', 404)
 
       const user = await User.findByPk(idUser)
-      if (!user) throw new HttpError('User not finded', 404)
+      if (!user) throw new HttpError('User not found', 404)
 
       const { street, number, numDpto, postalCode, idCommune } = req.body
 
@@ -431,7 +431,7 @@ export const updateUserPhoneController = async (req, res) => {
       if (!idUser) throw new HttpError('Id user not provided', 404)
 
       const user = await User.findByPk(idUser)
-      if (!user) throw new HttpError('User not finded', 404)
+      if (!user) throw new HttpError('User not found', 404)
 
       const { phone } = req.body
 
@@ -533,19 +533,46 @@ export const getAllClientsController = async (req, res) => {
 export const createClientController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
+      // NOTE Prev validations
+      const { email, password, name, lastName } = req.body
+      const userExist = await User.findOne({ where: { email } })
+      if (userExist) throw new HttpError('User already exist', 409)
 
+      // NOTE Creating user
+      const id = crypto.randomUUID()
+      const hashedPassword = await bcrypt.hash(password, salty)
+      const newUser = await User.create({ id, email, password: hashedPassword, name, lastName, fk_id_type_user: 2 })
+
+      // NOTE Generate token, endpoint and sending email
+      // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
+      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
+      await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
     })
+
+    return res.status(200).send({ status: 200, message: 'User Created!!!' })
   } catch (error) {
+    // NOTE Dont send all the info of error.
+    console.error('createClientController::: ', error)
+
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
+// TODO Front has to send a confirmation of the action, like "U sure of deleting this user? This cant ne undone "
 export const deleteClientController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
-
+      const userId = req.params.userId
+      const userFound = await User.findByPk(userId)
+      if (!userFound) throw new HttpError('User not found', 404)
+      await User.destroy({ where: { id: userId } })
     })
+
+    return res.status(200).send({ status: 200, message: 'User deleted!' })
   } catch (error) {
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }

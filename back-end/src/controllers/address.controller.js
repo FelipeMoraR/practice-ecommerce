@@ -7,7 +7,7 @@ export const getAllCommunes = async (req, res) => {
   try {
     const result = await sqDb.transaction(async () => {
       const allComunes = await Commune.findAll()
-      if (!allComunes) throw new HttpError('No communes finded', 404)
+      if (!allComunes) throw new HttpError('No communes found', 404)
       const comunesCleaned = allComunes.reduce((acc, comune) => {
         if (!comune) return acc
         if (!comune.dataValues) return acc
@@ -31,7 +31,7 @@ export const getAllRegions = async (req, res) => {
   try {
     const result = await sqDb.transaction(async () => {
       const allRegions = await Region.findAll()
-      if (!allRegions) throw new HttpError('No Regions finded', 404)
+      if (!allRegions) throw new HttpError('No Regions found', 404)
       const regionsCleaned = allRegions.reduce((acc, region) => {
         if (!region) return acc
         if (!region.dataValues) return acc

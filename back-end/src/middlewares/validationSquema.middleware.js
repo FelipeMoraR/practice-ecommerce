@@ -34,10 +34,10 @@ export const validateSquema = (schema, typeReqData) => {
           if (!error.message || !error.path) return acc
           const nameError = error.path[0]
           const messageError = error.message
-          const objFinded = acc.find(el => el.name === nameError)
+          const objFound = acc.find(el => el.name === nameError)
 
-          if (objFinded) {
-            objFinded.message = objFinded.message + ', ' + messageError
+          if (objFound) {
+            objFound.message = objFound.message + ', ' + messageError
             return acc
           }
 

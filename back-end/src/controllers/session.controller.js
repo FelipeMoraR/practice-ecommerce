@@ -16,7 +16,7 @@ export const refreshAccessTokenController = async (req, res) => {
     if (tokenIsBanned) throw new HttpError('Token is banned, please retry login', 401)
 
     const user = await User.findOne({ where: { id: tokenValid.id } })
-    if (!user) throw new HttpError('User not finded', 404)
+    if (!user) throw new HttpError('User not found', 404)
 
     const accessToken = jwt.sign(
       { id: user.id, username: user.username },

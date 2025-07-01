@@ -9,7 +9,9 @@ import {
   changePasswordController,
   updateUserAddressController,
   updateUserPhoneController,
-  getAllClientsController
+  getAllClientsController,
+  createClientController,
+  deleteClientController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validationSquema.middleware.js'
 import { privateRoute, adminRoute } from '../middlewares/protectedRoute.middleware.js'
@@ -38,7 +40,6 @@ UserRouter.get('/test-protected', privateRoute, (req, res) => {
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 })
-
 UserRouter.get('/test-admin-protected', privateRoute, adminRoute, (req, res) => {
   try {
     return res.status(200).send({ status: 200, message: 'Ok!' })
@@ -46,7 +47,6 @@ UserRouter.get('/test-admin-protected', privateRoute, adminRoute, (req, res) => 
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 })
-
 UserRouter.get('/get-all-client', privateRoute, adminRoute, validateSquema(getClientsSchema, 'query'), getAllClientsController)
 
 // SECTION POST
@@ -62,5 +62,11 @@ UserRouter.post('/update-password', validateSquema(changePasswordSchema, 'body')
 // ANCHOR Private post
 UserRouter.post('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
 UserRouter.post('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
+UserRouter.post('/create-new-client', privateRoute, validateSquema(registerSchema, 'body'), adminRoute, createClientController)
+
+// SECTION Delete
+// ANCHOR Public Delete
+// ANCHOR Private Delete
+UserRouter.delete('/delete-client/:userId', privateRoute, validateSquema(userIdSchema, 'params'), adminRoute, deleteClientController)
 
 export default UserRouter
