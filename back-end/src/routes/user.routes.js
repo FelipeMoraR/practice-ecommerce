@@ -7,11 +7,13 @@ import {
   sendEmailVerificationController,
   sendForgotPasswordEmailController,
   changePasswordController,
-  updateUserAddressController,
+  addUserAddressController,
   updateUserPhoneController,
   getAllClientsController,
   createClientController,
-  deleteClientController
+  deleteClientController,
+  updateUserAddressController,
+  deleteUserAddress
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validationSquema.middleware.js'
 import { privateRoute, adminRoute } from '../middlewares/protectedRoute.middleware.js'
@@ -21,9 +23,11 @@ import {
   emailSchema,
   userIdSchema,
   changePasswordSchema, tokenSchema,
+  addAddressUserSchema,
   updateAddressUserSchema,
   updatePhoneUserSchema,
-  getClientsSchema
+  getClientsSchema,
+  addressIdSchema
 } from '../squemas/user.squema.js'
 
 const UserRouter = express.Router()
@@ -60,13 +64,19 @@ UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema, 'body
 UserRouter.post('/update-password', validateSquema(changePasswordSchema, 'body'), changePasswordController)
 
 // ANCHOR Private post
-UserRouter.post('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
-UserRouter.post('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
+UserRouter.post('/add-user-address', privateRoute, validateSquema(addAddressUserSchema, 'body'), addUserAddressController)
+UserRouter.patch('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
 UserRouter.post('/create-new-client', privateRoute, validateSquema(registerSchema, 'body'), adminRoute, createClientController)
+
+// SECTION PATCH
+// ANCHOR Public PATCH
+// ANCHOR Private PATCH
+UserRouter.patch('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
 
 // SECTION Delete
 // ANCHOR Public Delete
 // ANCHOR Private Delete
 UserRouter.delete('/delete-client/:userId', privateRoute, validateSquema(userIdSchema, 'params'), adminRoute, deleteClientController)
+UserRouter.delete('/delete-user-address/:idAddress', privateRoute, validateSquema(addressIdSchema, 'params'), adminRoute, deleteUserAddress)
 
 export default UserRouter

@@ -375,18 +375,58 @@ export const changePasswordController = async (req, res) => {
 }
 
 // NOTE User data
-// FIXME An user can has more than one address
-// FIXME This has a problem of security, take too much time
-export const updateUserAddressController = async (req, res) => {
+export const addUserAddressController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
-      if (!idUser) throw new HttpError('Id user not provided', 404)
 
       const user = await User.findByPk(idUser)
       if (!user) throw new HttpError('User not found', 404)
 
       const { street, number, numDpto, postalCode, idCommune } = req.body
+
+      const comunneExist = await Commune.findByPk(idCommune)
+      if (!comunneExist) throw new HttpError('Commune not exist in table', 404)
+
+      const { count } = await UserAddress.findAndCountAll({ where: { fk_id_user: idUser } })
+
+      if (count >= 3) throw new HttpError('Limit address reached', 409)
+
+      const addressIsRepeated = await UserAddress.findOne({ include: { model: Address, where: { street, number, fk_id_commune: idCommune } }, where: { fk_id_user: idUser } })
+      if (addressIsRepeated) throw new HttpError('That address was already saved', 409)
+
+      const postalCodeResponse = await handlerGetPostalCode(street, number, comunneExist.name)
+
+      if (!postalCodeResponse || postalCodeResponse.status) {
+        const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
+        const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+        throw new HttpError(errorMessage, errorStatus)
+      }
+
+      if (postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
+      const idAddress = crypto.randomUUID()
+      const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, postalCode, fk_id_commune: idCommune })
+      const newNameUserAddress = user.name + 'Address' + count
+      const newIdForUserAdress = crypto.randomUUID()
+      await UserAddress.create({ id: newIdForUserAdress, name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })
+    })
+
+    return res.status(200).send({ status: 200, message: 'User address updated!!!' })
+  } catch (error) {
+    console.log('addUserAddressController: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+export const updateUserAddressController = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+      const { id: idUser } = req.userSession
+      const { idAddress, street, number, numDpto, postalCode, idCommune } = req.body
+
+      const user = await User.findByPk(idUser)
+      if (!user) throw new HttpError('User not found', 404)
 
       const comunneExist = await Commune.findByPk(idCommune)
       if (!comunneExist) throw new HttpError('Commune not exist in table', 404)
@@ -399,26 +439,37 @@ export const updateUserAddressController = async (req, res) => {
         throw new HttpError(errorMessage, errorStatus)
       }
 
-      if (postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
+      const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
+      if (!userAddressExist) throw new HttpError('Address not found', 404)
 
-      const userHasAddress = await UserAddress.findOne({ where: { fk_id_user: idUser } })
-      const idAddress = crypto.randomUUID()
-      if (userHasAddress) {
-        console.log('User already had an address')
-        const now = await handlerExtractUtcTimestamp()
-        await Address.update({ street, number, numDpto, postalCode, fk_id_commune: idCommune, updateAt: now }, { where: { id: userHasAddress.fk_id_address } })
-      } else {
-        console.log('User doesnt have an address, creating a new one...')
-        const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, postalCode, fk_id_commune: idCommune })
-        const newNameUserAddress = user.name + 'Address'
-        const newIdForUserAdress = crypto.randomUUID()
-        await UserAddress.create({ id: newIdForUserAdress, name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })
-      }
+      await Address.update({ street, number, numDpto, postalCode, fk_id_commune: idCommune }, { where: { id: idAddress } })
     })
 
-    return res.status(200).send({ status: 200, message: 'User address updated!!!' })
+    return res.status(200).send({ status: 200, message: 'Address updated!' })
   } catch (error) {
-    console.log('updateUserAddressController: ', error)
+    console.log('updateUserAddressController::: ', error)
+    if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    return res.status(500).send({ status: 500, message: 'Internal server error' })
+  }
+}
+
+// TODO Create a deleteUserAddress controller
+// FIXME When we delete a address and add a new one the name is not working as we thinked
+export const deleteUserAddress = async (req, res) => {
+  try {
+    await sqDb.transaction(async () => {
+      const { id: idUser } = req.userSession
+      const idAddress = req.params.idAddress
+
+      const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
+      if (!userAddressExist) throw new HttpError('Address not found', 404)
+
+      await UserAddress.destroy({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
+      await Address.destroy({ where: { id: idAddress } })
+    })
+
+    return res.status(200).send({ status: 200, message: 'Address deleted' })
+  } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
@@ -428,7 +479,6 @@ export const updateUserPhoneController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
-      if (!idUser) throw new HttpError('Id user not provided', 404)
 
       const user = await User.findByPk(idUser)
       if (!user) throw new HttpError('User not found', 404)
@@ -515,7 +565,7 @@ export const getAllClientsController = async (req, res) => {
       if (!el.useraddresses) return newUserToSave
 
       const addressesParsed = el.useraddresses.map(addrs => {
-        const addressToSave = { name: addrs.name, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: addrs.address.commune.name }
+        const addressToSave = { id: addrs.id, name: addrs.name, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: addrs.address.commune.name }
         return addressToSave
       })
       newUserToSave.addresses = addressesParsed
@@ -561,6 +611,7 @@ export const createClientController = async (req, res) => {
 }
 
 // TODO Front has to send a confirmation of the action, like "U sure of deleting this user? This cant ne undone "
+// FIXME Delete address if the user has one, you have to extract the id of all adress linked to that user and destroy it
 export const deleteClientController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {

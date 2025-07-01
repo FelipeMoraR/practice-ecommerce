@@ -114,6 +114,10 @@ export const userIdSchema = z.object({
   userId: z.string().min(1, 'userId is required').length(36, 'userId must have 36 char')
 })
 
+export const addressIdSchema = z.object({
+  idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char')
+})
+
 export const changePasswordSchema = z.object({
   token: z.string().min(1, 'Token is required'),
   secret: z.string().min(1, 'Secret is required'),
@@ -168,7 +172,16 @@ export const tokenSchema = z.object({
   token: z.string().min(1, 'Token is required')
 })
 
+export const addAddressUserSchema = z.object({
+  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100'),
+  number: z.number().min(1, 'Number is required'),
+  numDpto: z.number().min(0, 'NumDpto is required'),
+  postalCode: z.string().min(1, 'Postal code is required').regex(/^\d+$/, 'Postal code must contain only digits').length(7, 'Postal code mus have a length of 7').transform(Number),
+  idCommune: z.number().min(1, 'idCommune is required')
+})
+
 export const updateAddressUserSchema = z.object({
+  idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char'),
   street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100'),
   number: z.number().min(1, 'Number is required'),
   numDpto: z.number().min(0, 'NumDpto is required'),
