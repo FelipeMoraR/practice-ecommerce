@@ -15,7 +15,9 @@ import {
   updateUserAddressController,
   deleteUserAddressController,
   viewUserController,
-  updateBasicClientInfoController
+  updateBasicClientInfoController,
+  updateAddressClientInfoController,
+  deleteAddressClientController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validationSquema.middleware.js'
 import { privateRoute, adminRoute } from '../middlewares/protectedRoute.middleware.js'
@@ -29,7 +31,10 @@ import {
   updateAddressUserSchema,
   updatePhoneUserSchema,
   getClientsSchema,
-  addressIdSchema
+  addressIdSchema,
+  updateClientPersonalInfoSchema,
+  updateClientAddressSchema,
+  deleteClientAddressSchema
 } from '../squemas/user.squema.js'
 
 const UserRouter = express.Router()
@@ -45,9 +50,8 @@ UserRouter.get('/get-user', privateRoute, viewUserController)
 UserRouter.post('/login', validateSquema(loginSchema, 'body'), loginUserController)
 UserRouter.post('/register', validateSquema(registerSchema, 'body'), registerUserController)
 UserRouter.post('/logout', logoutUserController)
-UserRouter.post('/confirm-email', validateSquema(tokenSchema, 'body'), confirmEmailVerificationController)
-// FIXME Change it and send the id as query
-UserRouter.post('/resend-email-verification', validateSquema(userIdSchema, 'body'), sendEmailVerificationController)
+UserRouter.post('/confirm-email/:token', validateSquema(tokenSchema, 'params'), confirmEmailVerificationController)
+UserRouter.post('/resend-email-verification/:userId', validateSquema(userIdSchema, 'params'), sendEmailVerificationController)
 UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema, 'body'), sendForgotPasswordEmailController)
 UserRouter.post('/update-password', validateSquema(changePasswordSchema, 'body'), changePasswordController)
 
@@ -60,12 +64,14 @@ UserRouter.post('/create-new-client', privateRoute, adminRoute, validateSquema(r
 // ANCHOR Public PATCH
 // ANCHOR Private PATCH
 UserRouter.patch('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
-UserRouter.patch('/update-client-personal-info', privateRoute, adminRoute, updateBasicClientInfoController)
+UserRouter.patch('/update-client-personal-info', privateRoute, adminRoute, validateSquema(updateClientPersonalInfoSchema, 'body'), updateBasicClientInfoController)
+UserRouter.patch('/update-client-address-info', privateRoute, adminRoute, validateSquema(updateClientAddressSchema, 'body'), updateAddressClientInfoController)
 
 // SECTION Delete
 // ANCHOR Public Delete
 // ANCHOR Private Delete
 UserRouter.delete('/delete-client/:userId', privateRoute, adminRoute, validateSquema(userIdSchema, 'params'), deleteClientController)
 UserRouter.delete('/delete-user-address/:idAddress', privateRoute, validateSquema(addressIdSchema, 'params'), deleteUserAddressController)
+UserRouter.delete('/delete-client-address/:idAddress/:idUser', privateRoute, adminRoute, validateSquema(deleteClientAddressSchema, 'params'), deleteAddressClientController)
 
 export default UserRouter

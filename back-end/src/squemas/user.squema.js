@@ -173,7 +173,7 @@ export const tokenSchema = z.object({
 })
 
 export const addAddressUserSchema = z.object({
-  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100'),
+  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100').regex(regexOnlyLetterAndSpaces, 'Street only accept letters'),
   number: z.number().min(1, 'Number is required'),
   numDpto: z.number().min(0, 'NumDpto is required'),
   postalCode: z.string().min(1, 'Postal code is required').regex(/^\d+$/, 'Postal code must contain only digits').length(7, 'Postal code mus have a length of 7').transform(Number),
@@ -182,7 +182,7 @@ export const addAddressUserSchema = z.object({
 
 export const updateAddressUserSchema = z.object({
   idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char'),
-  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100'),
+  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100').regex(regexOnlyLetterAndSpaces, 'Street only accept letters'),
   number: z.number().min(1, 'Number is required'),
   numDpto: z.number().min(0, 'NumDpto is required'),
   postalCode: z.string().min(1, 'Postal code is required').regex(/^\d+$/, 'Postal code must contain only digits').length(7, 'Postal code mus have a length of 7').transform(Number),
@@ -200,21 +200,19 @@ export const getClientsSchema = z.object({
   order: z.string().regex(regexOrderQuery, 'Order only accept this format asc|desc(field)').optional()
 })
 
-// TODO you can send empty values
-export const updateClientPersonalInfo = z.object({
-  id: z.string(),
-  email: z.string().email('Invalid email address').max(250, 'Max length email 250').optional(),
+export const updateClientPersonalInfoSchema = z.object({
+  id: z.string().min(1, 'id is required').length(36, 'id must have 36 char'),
+  email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250').optional(),
   password: z.string().length(9, 'Password must have 9 characters').optional(),
   name: z.string().min(1, 'Name is required').max(45, 'Max length name 45').optional(),
   lastName: z.string().min(1, 'Last name is required').max(45, 'Max length last name 45').optional(),
-  phone: z.string().length(8, 'Phone must have 8 digits').regex(/^\d+$/, 'Phone number must contain only digits').transform(Number).optional(),
-  isVerified: z.string().optional()
+  phone: z.string().length(8, 'Phone must have 8 digits').regex(/^\d+$/, 'Phone number must contain only digits').transform(Number).optional()
 })
   .superRefine((data, context) => {
     // ANCHOR - email valdiation
-    const emailDomain = data.email.split('@')[1]?.toLowerCase()
+    const emailDomain = data.email?.split('@')[1]?.toLowerCase()
 
-    if (!(emailDomain && !blockedDomains.includes(emailDomain))) {
+    if (emailDomain && blockedDomains.includes(emailDomain)) {
       context.addIssue({
         message: 'Email domain not allowed',
         path: ['email'],
@@ -223,8 +221,7 @@ export const updateClientPersonalInfo = z.object({
     }
 
     // ANCHOR - password valdiation
-
-    if (!regexPassword.test(data.password)) {
+    if (data.password && !regexPassword.test(data.password)) {
       context.addIssue({
         message: 'Special caracters of password are invalid, special character allowed are _ - @ # $ ! ¡ .',
         path: ['password'],
@@ -232,7 +229,7 @@ export const updateClientPersonalInfo = z.object({
       })
     }
 
-    if (!regexAtLeastOneNumber.test(data.password)) {
+    if (data.password && !regexAtLeastOneNumber.test(data.password)) {
       context.addIssue({
         message: 'Must contain at least one number',
         path: ['password'],
@@ -240,7 +237,7 @@ export const updateClientPersonalInfo = z.object({
       })
     }
 
-    if (!regexAtLeastOneSpecialCharacter.test(data.password)) {
+    if (data.password && !regexAtLeastOneSpecialCharacter.test(data.password)) {
       context.addIssue({
         message: 'Must contain at least one valid special character',
         path: ['password'],
@@ -248,7 +245,7 @@ export const updateClientPersonalInfo = z.object({
       })
     }
 
-    if (!regexAtleastOneLetter.test(data.password)) {
+    if (data.password && !regexAtleastOneLetter.test(data.password)) {
       context.addIssue({
         message: 'Must contain at least one letter',
         path: ['password'],
@@ -257,8 +254,7 @@ export const updateClientPersonalInfo = z.object({
     }
 
     // ANCHOR - name validation
-
-    if (!regexOnlyLetter.test(data.name)) {
+    if (data.name && !regexOnlyLetter.test(data.name)) {
       context.addIssue({
         message: 'Values not valid in name, use just letters',
         path: ['name'],
@@ -267,8 +263,7 @@ export const updateClientPersonalInfo = z.object({
     }
 
     // ANCHOR - lastname validation
-
-    if (!regexOnlyLetter.test(data.lastName)) {
+    if (data.lastName && !regexOnlyLetter.test(data.lastName)) {
       context.addIssue({
         message: 'Values not valid in last name, use just letters',
         path: ['lastName'],
@@ -276,3 +271,18 @@ export const updateClientPersonalInfo = z.object({
       })
     }
   })
+
+export const updateClientAddressSchema = z.object({
+  idUser: z.string().min(1, 'idUser is required').length(36, 'idUser must have 36 char'),
+  idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char'),
+  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100').regex(regexOnlyLetterAndSpaces, 'Street only accept letters').optional(),
+  number: z.number().min(1, 'Number is required').optional(),
+  numDpto: z.number().min(0, 'NumDpto is required').optional(),
+  postalCode: z.string().min(1, 'Postal code is required').regex(/^\d+$/, 'Postal code must contain only digits').length(7, 'Postal code mus have a length of 7').transform(Number).optional(),
+  idCommune: z.number().min(1, 'idCommune is required').optional()
+})
+
+export const deleteClientAddressSchema = z.object({
+  idUser: z.string().min(1, 'idUser is required').length(36, 'idUser must have 36 char'),
+  idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char')
+})
