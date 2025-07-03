@@ -14,10 +14,11 @@ import Address from '../models/address.model.js'
 import Commune from '../models/commune.model.js'
 import { randomBytes } from 'crypto'
 import { Op } from 'sequelize'
+import { saveLogController } from './logger.controller.js'
+
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
-// TODO Generate test for all controllers.
-// TODO Generate logger db and controllers
+// TODO Generate integration test, end-to-end and unit tests for all controllers.
 // TODO User can change some values, but one time per 60 days
 
 // NOTE Handlers
@@ -48,19 +49,27 @@ const handlerGetPostalCode = async (street, number, comune) => {
 // NOTE Basic login logic
 export const loginUserController = async (req, res) => {
   try {
+    const { email, password } = req.body
+
     const result = await sqDb.transaction(async () => {
       // NOTE extract the actual date FROM DB
       const now = await handlerExtractUtcTimestamp()
 
       // NOTE User verification
-      const { email, password } = req.body
       const user = await User.findOne({ where: { email } })
-      if (!user) throw new HttpError('Email not found', 404)
+      if (!user) throw new HttpError('Email or password invalid', 403)
+
       const passwordIsValid = await bcrypt.compare(password, user.password)
-      if (!passwordIsValid) throw new HttpError('Invalid password', 403)
+      if (!passwordIsValid) {
+        await saveLogController('ERROR', 'Attemp to login but fails in autentication', email)
+        throw new HttpError('Email or password invalid', 403)
+      }
 
       // NOTE Spam controll to user verification
-      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: true }
+      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
+        await saveLogController('WARNING', 'Attemp to login but user wasnt verified. Email was already sended', email)
+        return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: true }
+      }
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
@@ -68,13 +77,14 @@ export const loginUserController = async (req, res) => {
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
+        await saveLogController('AUDIT', 'Attemp to login but user wasnt verified. Email was sended', email)
 
         return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: false }
       }
 
       // NOTE Generate access tokens
       const accessToken = jwt.sign(
-        { id: user.id, username: user.username },
+        { id: user.id, userFullName: `${user.name} ${user.lastName}` },
         JWT_SECRET,
         {
           expiresIn: '10m'
@@ -100,6 +110,8 @@ export const loginUserController = async (req, res) => {
     if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Email has to be verified but an email was already sended. Wait a while...' })
     if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
 
+    await saveLogController('AUDIT', 'User login', email)
+
     return res
       .cookie('access_token', result.accessToken, {
         httpOnly: true,
@@ -117,18 +129,23 @@ export const loginUserController = async (req, res) => {
   } catch (error) {
     console.log('loginUserController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'loginUserController: ' + error.message)
 
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const registerUserController = async (req, res) => {
+  const startTime = performance.now()
   try {
+    const { email, password, name, lastName } = req.body
     await sqDb.transaction(async () => {
       // NOTE Prev validations
-      const { email, password, name, lastName } = req.body
       const userExist = await User.findOne({ where: { email } })
-      if (userExist) throw new HttpError('User already exist', 409)
+      if (userExist) {
+        await saveLogController('WARNING', 'User tried to register but he already has an account', email)
+        throw new HttpError('User already exist', 409)
+      }
 
       // NOTE Creating user
       const id = crypto.randomUUID()
@@ -139,14 +156,20 @@ export const registerUserController = async (req, res) => {
       // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
+      await saveLogController('AUDIT', 'verification email Sended', email)
     })
-
+    const endTime = performance.now()
+    await saveLogController('AUDIT', `User registered, time performance ${endTime - startTime}`, email)
     return res.status(200).send({ status: 200, message: 'User Created!!!' })
   } catch (error) {
     // NOTE Dont send all the info of error.
+    const endTime = performance.now()
+    await saveLogController('AUDIT', `Time to register and fail ${endTime - startTime}`)
+
     console.error('registerUserController::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'registerUserController: ' + error.message)
 
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
@@ -159,8 +182,16 @@ export const logoutUserController = async (req, res) => {
       const cookieRefreshTokenBrowser = req.cookies.refresh_token
       if (!cookieRefreshTokenBrowser) throw new HttpError('No cookie provided', 404)
       const tokenData = jwt.decode(cookieRefreshTokenBrowser)
+
+      const userData = await User.findByPk(tokenData.id)
+      if (!userData) {
+        await saveLogController('ERROR', 'Trying to logout with a id user that do not exist')
+        throw new HttpError('User not exist', 404)
+      }
+
+      await saveLogController('AUDIT', 'User logout', userData.email)
       const tokenIsValid = await TokenWhiteList.findByPk(tokenData.jti)
-      if (!tokenIsValid) throw new HttpError('Token not exist in white list', 401)
+      if (!tokenIsValid) throw new HttpError('Token not exist in white list', 404)
       await TokenWhiteList.destroy({ where: { id: tokenData.jti } })
 
       // NOTE saving token in blackList
@@ -176,6 +207,7 @@ export const logoutUserController = async (req, res) => {
   } catch (error) {
     console.error('logoutUserController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'logoutUserController: ' + error.message)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
@@ -199,6 +231,7 @@ export const confirmEmailVerificationController = async (req, res) => {
 
       // NOTE updating verification
       await User.update({ isVerified: true, updateAt: now }, { where: { id: data.id } })
+      await saveLogController('AUDIT', 'User verified his email', user.email)
 
       return 200
     })
@@ -210,9 +243,12 @@ export const confirmEmailVerificationController = async (req, res) => {
     })
   } catch (error) {
     console.log('confirmEmailController::: ', error)
-    if (error.name === 'JsonWebTokenError') return res.status(498).send({ status: 498, message: error.message })
-    if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      await saveLogController('ERROR', 'confirmEmailVerificationController: ' + error.message)
+      return res.status(498).send({ status: 498, message: error.message })
+    }
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'confirmEmailVerificationController: ' + error.message)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
@@ -450,31 +486,51 @@ export const addUserAddressController = async (req, res) => {
   }
 }
 
-// FIXME Parames of req must be controlled
 export const updateUserAddressController = async (req, res) => {
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
       const { idAddress, street, number, numDpto, postalCode, idCommune } = req.body
+      if (!street && !number && !numDpto && !postalCode && !idCommune) throw new HttpError('Not modified', 304)
 
       const user = await User.findByPk(idUser)
       if (!user) throw new HttpError('User not found', 404)
 
-      const comunneExist = await Commune.findByPk(idCommune)
-      if (!comunneExist) throw new HttpError('Commune not exist in table', 404)
-
-      const postalCodeResponse = await handlerGetPostalCode(street, number, comunneExist.name)
-
-      if (!postalCodeResponse || postalCodeResponse.status) {
-        const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
-        const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
-        throw new HttpError(errorMessage, errorStatus)
-      }
-
-      const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
+      const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress }, include: { model: Address, include: { model: Commune } } })
       if (!userAddressExist) throw new HttpError('Address not found', 404)
 
-      await Address.update({ street, number, numDpto, postalCode, fk_id_commune: idCommune }, { where: { id: idAddress } })
+      // NOTE This allow flexibility to the front and send only the info that change
+      const valuesToUpdate = {
+        street: street || userAddressExist.address.street,
+        number: number || userAddressExist.address.number,
+        numDpto: numDpto || userAddressExist.address.numDpto,
+        postalCode: postalCode || userAddressExist.address.postalCode,
+        fk_id_commune: idCommune || userAddressExist.address.fk_id_commune
+      }
+
+      const addressIsRepeated = await UserAddress.findOne({ include: { model: Address, where: { street: valuesToUpdate.street, number: valuesToUpdate.number, numDpto: valuesToUpdate.numDpto, fk_id_commune: valuesToUpdate.fk_id_commune } }, where: { fk_id_user: idUser } })
+      if (addressIsRepeated) throw new HttpError('That address was already saved to the user', 409)
+
+      let newCommuneExist = null
+      if (idCommune) {
+        newCommuneExist = await Commune.findByPk(idCommune)
+        if (!newCommuneExist) throw new HttpError('Commune not exist in table', 404)
+        valuesToUpdate.fk_id_commune = newCommuneExist.id
+      }
+
+      if (street || number || postalCode || newCommuneExist) {
+        const postalCodeResponse = await handlerGetPostalCode(valuesToUpdate.street, valuesToUpdate.number, newCommuneExist ? newCommuneExist.name : userAddressExist.address.commune.name)
+
+        if (!postalCodeResponse || postalCodeResponse.status) {
+          const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
+          const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+          throw new HttpError(errorMessage, errorStatus)
+        }
+
+        if (valuesToUpdate.postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
+      }
+
+      await Address.update(valuesToUpdate, { where: { id: idAddress } })
     })
 
     return res.status(200).send({ status: 200, message: 'Address updated!' })
@@ -729,8 +785,6 @@ export const updateAddressClientInfoController = async (req, res) => {
         postalCode: postalCode || userAddressExist.address.postalCode,
         fk_id_commune: idCommune || userAddressExist.address.fk_id_commune
       }
-
-      console.log(valuesToUpdate)
 
       const addressIsRepeated = await UserAddress.findOne({ include: { model: Address, where: { street: valuesToUpdate.street, number: valuesToUpdate.number, numDpto: valuesToUpdate.numDpto, fk_id_commune: valuesToUpdate.fk_id_commune } }, where: { fk_id_user: idUser } })
       if (addressIsRepeated) throw new HttpError('That address was already saved to the user', 409)

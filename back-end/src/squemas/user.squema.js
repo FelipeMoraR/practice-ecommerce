@@ -182,11 +182,11 @@ export const addAddressUserSchema = z.object({
 
 export const updateAddressUserSchema = z.object({
   idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char'),
-  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100').regex(regexOnlyLetterAndSpaces, 'Street only accept letters'),
-  number: z.number().min(1, 'Number is required'),
-  numDpto: z.number().min(0, 'NumDpto is required'),
-  postalCode: z.string().min(1, 'Postal code is required').regex(/^\d+$/, 'Postal code must contain only digits').length(7, 'Postal code mus have a length of 7').transform(Number),
-  idCommune: z.number().min(1, 'idCommune is required')
+  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100').regex(regexOnlyLetterAndSpaces, 'Street only accept letters').optional(),
+  number: z.number().min(1, 'Number is required').optional(),
+  numDpto: z.number().min(0, 'NumDpto is required').optional(),
+  postalCode: z.string().min(1, 'Postal code is required').regex(/^\d+$/, 'Postal code must contain only digits').length(7, 'Postal code mus have a length of 7').transform(Number).optional(),
+  idCommune: z.number().min(1, 'idCommune is required').optional()
 })
 
 export const updatePhoneUserSchema = z.object({

@@ -57,7 +57,6 @@ UserRouter.post('/update-password', validateSquema(changePasswordSchema, 'body')
 
 // ANCHOR Private post
 UserRouter.post('/add-user-address', privateRoute, validateSquema(addAddressUserSchema, 'body'), addUserAddressController)
-UserRouter.patch('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
 UserRouter.post('/create-new-client', privateRoute, adminRoute, validateSquema(registerSchema, 'body'), createClientController)
 
 // SECTION PATCH
@@ -66,6 +65,7 @@ UserRouter.post('/create-new-client', privateRoute, adminRoute, validateSquema(r
 UserRouter.patch('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
 UserRouter.patch('/update-client-personal-info', privateRoute, adminRoute, validateSquema(updateClientPersonalInfoSchema, 'body'), updateBasicClientInfoController)
 UserRouter.patch('/update-client-address-info', privateRoute, adminRoute, validateSquema(updateClientAddressSchema, 'body'), updateAddressClientInfoController)
+UserRouter.patch('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
 
 // SECTION Delete
 // ANCHOR Public Delete

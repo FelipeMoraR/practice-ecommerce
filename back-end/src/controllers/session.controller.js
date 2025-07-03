@@ -59,7 +59,6 @@ export const getSessionInfoController = async (req, res) => {
       }
     })
   } catch (error) {
-    // TODO not show all the error
     console.log('getSessionInfoController::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })

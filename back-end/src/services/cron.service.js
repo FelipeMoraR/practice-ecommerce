@@ -8,7 +8,7 @@ import { Op } from 'sequelize'
 export const tokenBlackListCleaner = () => {
   try {
     // NOTE This will run every Friday at 3:00 AM (0 seconds, 0 minutes, 3 hours) one day of every 3 month
-    nodeCron.schedule('0 0 3 1 */3 5', async () => { // NOTE Every friday. But now is every fifteen seconds
+    nodeCron.schedule('0 0 3 1 */3 5', async () => {
       const now = await handlerExtractUtcTimestamp()
 
       sqDb.transaction(async () => {
