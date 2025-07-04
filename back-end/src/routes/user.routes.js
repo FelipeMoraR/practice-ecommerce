@@ -8,7 +8,6 @@ import {
   sendForgotPasswordEmailController,
   changePasswordController,
   addUserAddressController,
-  updateUserPhoneController,
   getAllClientsController,
   createClientController,
   deleteClientController,
@@ -17,7 +16,10 @@ import {
   viewUserController,
   updateBasicClientInfoController,
   updateAddressClientInfoController,
-  deleteAddressClientController
+  deleteAddressClientController,
+  createNewAddressClientController,
+  updateBasicUserInfoController,
+  updateUserPasswordController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validationSquema.middleware.js'
 import { privateRoute, adminRoute } from '../middlewares/protectedRoute.middleware.js'
@@ -26,15 +28,18 @@ import {
   registerSchema,
   emailSchema,
   userIdSchema,
-  changePasswordSchema, tokenSchema,
+  forgotPasswordSchema,
+  tokenSchema,
   addAddressUserSchema,
   updateAddressUserSchema,
-  updatePhoneUserSchema,
   getClientsSchema,
   addressIdSchema,
   updateClientPersonalInfoSchema,
   updateClientAddressSchema,
-  deleteClientAddressSchema
+  deleteClientAddressSchema,
+  addAddressUserByAdminSchema,
+  updateBasicUserInfoSchema,
+  updatePasswordSchema
 } from '../squemas/user.squema.js'
 
 const UserRouter = express.Router()
@@ -53,19 +58,21 @@ UserRouter.post('/logout', logoutUserController)
 UserRouter.post('/confirm-email/:token', validateSquema(tokenSchema, 'params'), confirmEmailVerificationController)
 UserRouter.post('/resend-email-verification/:userId', validateSquema(userIdSchema, 'params'), sendEmailVerificationController)
 UserRouter.post('/send-email-forgot-password', validateSquema(emailSchema, 'body'), sendForgotPasswordEmailController)
-UserRouter.post('/update-password', validateSquema(changePasswordSchema, 'body'), changePasswordController)
+UserRouter.post('/update-password', validateSquema(forgotPasswordSchema, 'body'), changePasswordController)
 
 // ANCHOR Private post
 UserRouter.post('/add-user-address', privateRoute, validateSquema(addAddressUserSchema, 'body'), addUserAddressController)
 UserRouter.post('/create-new-client', privateRoute, adminRoute, validateSquema(registerSchema, 'body'), createClientController)
+UserRouter.post('/create-new-address-client', privateRoute, adminRoute, validateSquema(addAddressUserByAdminSchema, 'body'), createNewAddressClientController)
 
 // SECTION PATCH
 // ANCHOR Public PATCH
 // ANCHOR Private PATCH
-UserRouter.patch('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
+UserRouter.patch('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
+UserRouter.patch('/update-basic-user-info', privateRoute, validateSquema(updateBasicUserInfoSchema, 'body'), updateBasicUserInfoController)
+UserRouter.patch('/update-password-user', privateRoute, validateSquema(updatePasswordSchema, 'body'), updateUserPasswordController)
 UserRouter.patch('/update-client-personal-info', privateRoute, adminRoute, validateSquema(updateClientPersonalInfoSchema, 'body'), updateBasicClientInfoController)
 UserRouter.patch('/update-client-address-info', privateRoute, adminRoute, validateSquema(updateClientAddressSchema, 'body'), updateAddressClientInfoController)
-UserRouter.patch('/update-user-address', privateRoute, validateSquema(updateAddressUserSchema, 'body'), updateUserAddressController)
 
 // SECTION Delete
 // ANCHOR Public Delete

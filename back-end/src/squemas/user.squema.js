@@ -118,13 +118,95 @@ export const addressIdSchema = z.object({
   idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char')
 })
 
-export const changePasswordSchema = z.object({
+export const forgotPasswordSchema = z.object({
   token: z.string().min(1, 'Token is required'),
   secret: z.string().min(1, 'Secret is required'),
   newPassword: z.string().min(1, 'New password is required').length(9, 'New password must have 9 characters'),
   confirmNewPassword: z.string().min(1, 'Confirm new password is required').length(9, 'Confirm new password must have 9 characters')
 })
   .superRefine((data, context) => {
+    // ANCHOR newPassword validations
+    if (!regexPassword.test(data.newPassword)) {
+      context.addIssue({
+        message: 'Special caracters of new password are invalid, special character allowed are _ - @ # $ ! ¡ .',
+        path: ['newPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    if (!regexAtLeastOneNumber.test(data.newPassword)) {
+      context.addIssue({
+        message: 'New password must contain at least one number',
+        path: ['newPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    if (!regexAtLeastOneSpecialCharacter.test(data.newPassword)) {
+      context.addIssue({
+        message: 'New password must contain at least one valid special character',
+        path: ['newPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    if (!regexAtleastOneLetter.test(data.newPassword)) {
+      context.addIssue({
+        message: 'New password must contain at least one letter',
+        path: ['newPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    // ANCHOR confirmNewPassword validation
+    if (data.newPassword !== data.confirmNewPassword) {
+      context.addIssue({
+        message: 'New password and confirm new password must be equal',
+        path: ['confirmNewPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+  })
+
+export const updatePasswordSchema = z.object({
+  oldPassword: z.string().length(9, 'oldPassword must have 9 characters'),
+  newPassword: z.string().length(9, 'New password must have 9 characters'),
+  confirmNewPassword: z.string().length(9, 'confirmNewPassword must have 9 characters')
+})
+  .superRefine((data, context) => {
+    // ANCHOR oldPassword validations
+    if (!regexPassword.test(data.oldPassword)) {
+      context.addIssue({
+        message: 'Special caracters of old password are invalid, special character allowed are _ - @ # $ ! ¡ .',
+        path: ['oldPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    if (!regexAtLeastOneNumber.test(data.oldPassword)) {
+      context.addIssue({
+        message: 'Old password must contain at least one number',
+        path: ['oldPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    if (!regexAtLeastOneSpecialCharacter.test(data.oldPassword)) {
+      context.addIssue({
+        message: 'Old password must contain at least one valid special character',
+        path: ['oldPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
+    if (!regexAtleastOneLetter.test(data.oldPassword)) {
+      context.addIssue({
+        message: 'Old password must contain at least one letter',
+        path: ['oldPassword'],
+        code: z.ZodIssueCode.custom
+      })
+    }
+
     // ANCHOR newPassword validations
     if (!regexPassword.test(data.newPassword)) {
       context.addIssue({
@@ -180,6 +262,15 @@ export const addAddressUserSchema = z.object({
   idCommune: z.number().min(1, 'idCommune is required')
 })
 
+export const addAddressUserByAdminSchema = z.object({
+  idUser: z.string().min(1, 'userId is required').length(36, 'userId must have 36 char'),
+  street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100').regex(regexOnlyLetterAndSpaces, 'Street only accept letters'),
+  number: z.number().min(1, 'Number is required'),
+  numDpto: z.number().min(0, 'NumDpto is required'),
+  postalCode: z.string().min(1, 'Postal code is required').regex(/^\d+$/, 'Postal code must contain only digits').length(7, 'Postal code mus have a length of 7').transform(Number),
+  idCommune: z.number().min(1, 'idCommune is required')
+})
+
 export const updateAddressUserSchema = z.object({
   idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char'),
   street: z.string().min(1, 'Street is required').max(100, 'Street is too long, its max length is 100').regex(regexOnlyLetterAndSpaces, 'Street only accept letters').optional(),
@@ -189,8 +280,9 @@ export const updateAddressUserSchema = z.object({
   idCommune: z.number().min(1, 'idCommune is required').optional()
 })
 
-export const updatePhoneUserSchema = z.object({
-  phone: z.string().length(8, 'Phone must have 8 digits').regex(/^\d+$/, 'Phone number must contain only digits').transform(Number)
+export const updateBasicUserInfoSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(45, 'Max length name 45').optional(),
+  lastName: z.string().min(1, 'Last name is required').max(45, 'Max length last name 45').optional()
 })
 
 export const getClientsSchema = z.object({

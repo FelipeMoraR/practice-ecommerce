@@ -43,6 +43,16 @@ export async function up (queryInterface, Sequelize) {
       allowNull: true,
       defaultValue: null
     },
+    lastUpdateBasicInfoUserByUser: {
+      type: Sequelize.DATE,
+      allowNull: true,
+      defaultValue: null
+    },
+    lastUpdateUserByAdmin: {
+      type: Sequelize.DATE,
+      allowNull: true,
+      defaultValue: null
+    },
     fk_id_type_user: {
       type: Sequelize.INTEGER,
       allowNull: false,

@@ -3,8 +3,11 @@ import { JWT_SECRET, NODE_ENV } from '../config/config.js'
 import { HttpError } from '../utils/customErrors.js'
 import TokenBlackList from '../models/tokenBlackList.model.js'
 import User from '../models/user.model.js'
+import { saveLogController } from './logger.controller.js'
 
 export const refreshAccessTokenController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     const refreshToken = req.cookies.refresh_token
     if (!refreshToken) throw new HttpError('Refresh token not provided', 404)
@@ -13,10 +16,12 @@ export const refreshAccessTokenController = async (req, res) => {
     if (!tokenValid) throw new HttpError('Invalid refresh token', 406)
 
     const tokenIsBanned = await TokenBlackList.findOne({ where: { token: refreshToken } })
-    if (tokenIsBanned) throw new HttpError('Token is banned, please retry login', 401)
+    if (tokenIsBanned) throw new HttpError('Invalid refresh token', 403)
 
     const user = await User.findOne({ where: { id: tokenValid.id } })
     if (!user) throw new HttpError('User not found', 404)
+
+    await saveLogController('INFO', 'User refresh token', user.email, ip)
 
     const accessToken = jwt.sign(
       { id: user.id, username: user.username },

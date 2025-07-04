@@ -4,211 +4,211 @@
 export async function up (queryInterface, Sequelize) {
   await queryInterface.bulkInsert('commune', [
     {
-      name: 'Cerrillos',
+      name: 'CERRILLOS',
       fk_id_region: 1
     },
     {
-      name: 'Cerro Navia',
+      name: 'CERRO NAVIA',
       fk_id_region: 1
     },
     {
-      name: 'Conchalí',
+      name: 'CONCHALÍ',
       fk_id_region: 1
     },
     {
-      name: 'El Bosque',
+      name: 'EL BOSQUE',
       fk_id_region: 1
     },
     {
-      name: 'Estación Central',
+      name: 'ESTACIÓN CENTRAL',
       fk_id_region: 1
     },
     {
-      name: 'Huechuraba',
+      name: 'HUECHURABA',
       fk_id_region: 1
     },
     {
-      name: 'Independencia',
+      name: 'INDEPENDENCIA',
       fk_id_region: 1
     },
     {
-      name: 'La Cisterna',
+      name: 'LA CISTERNA',
       fk_id_region: 1
     },
     {
-      name: 'La Florida',
+      name: 'LA FLORIDA',
       fk_id_region: 1
     },
     {
-      name: 'La Granja',
+      name: 'LA GRANJA',
       fk_id_region: 1
     },
     {
-      name: 'La Pintana',
+      name: 'LA PINTANA',
       fk_id_region: 1
     },
     {
-      name: 'La Reina',
+      name: 'LA REINA',
       fk_id_region: 1
     },
     {
-      name: 'Las Condes',
+      name: 'LAS CONDES',
       fk_id_region: 1
     },
     {
-      name: 'Lo Barnechea',
+      name: 'LO BARNECHEA',
       fk_id_region: 1
     },
     {
-      name: 'Lo Espejo',
+      name: 'LO ESPEJO',
       fk_id_region: 1
     },
     {
-      name: 'Lo Prado',
+      name: 'LO PRADO',
       fk_id_region: 1
     },
     {
-      name: 'Macul',
+      name: 'MACUL',
       fk_id_region: 1
     },
     {
-      name: 'Maipú',
+      name: 'MAIPÚ',
       fk_id_region: 1
     },
     {
-      name: 'Ñuñoa',
+      name: 'ÑUÑOA',
       fk_id_region: 1
     },
     {
-      name: 'Pedro Aguirre Cerda',
+      name: 'PEDRO AGUIRRE CERDA',
       fk_id_region: 1
     },
     {
-      name: 'Peñalolén',
+      name: 'PEÑALOLÉN',
       fk_id_region: 1
     },
     {
-      name: 'Providencia',
+      name: 'PROVIDENCIA',
       fk_id_region: 1
     },
     {
-      name: 'Pudahuel',
+      name: 'PUDAHUEL',
       fk_id_region: 1
     },
     {
-      name: 'Quilicura',
+      name: 'QUILICURA',
       fk_id_region: 1
     },
     {
-      name: 'Quinta Normal',
+      name: 'QUINTA NORMAL',
       fk_id_region: 1
     },
     {
-      name: 'Recoleta',
+      name: 'RECOLETA',
       fk_id_region: 1
     },
     {
-      name: 'Renca',
+      name: 'RENCA',
       fk_id_region: 1
     },
     {
-      name: 'San Joaquín',
+      name: 'SAN JOAQUÍN',
       fk_id_region: 1
     },
     {
-      name: 'San Miguel',
+      name: 'SAN MIGUEL',
       fk_id_region: 1
     },
     {
-      name: 'San Ramón',
+      name: 'SAN RAMÓN',
       fk_id_region: 1
     },
     {
-      name: 'Santiago',
+      name: 'SANTIAGO',
       fk_id_region: 1
     },
     {
-      name: 'Vitacura',
+      name: 'VITACURA',
       fk_id_region: 1
     },
     {
-      name: 'Colina',
+      name: 'COLINA',
       fk_id_region: 1
     },
     {
-      name: 'Lampa',
+      name: 'LAMPA',
       fk_id_region: 1
     },
     {
-      name: 'Tiltil',
+      name: 'TILTIL',
       fk_id_region: 1
     },
     {
-      name: 'Pirque',
+      name: 'PIRQUE',
       fk_id_region: 1
     },
     {
-      name: 'Puente Alto',
+      name: 'PUENTE ALTO',
       fk_id_region: 1
     },
     {
-      name: 'San José de Maipo',
+      name: 'SAN JOSÉ DE MAIPO',
       fk_id_region: 1
     },
     {
-      name: 'Buin',
+      name: 'BUIN',
       fk_id_region: 1
     },
     {
-      name: 'Calera de Tango',
+      name: 'CALERA DE TANGO',
       fk_id_region: 1
     },
     {
-      name: 'Paine',
+      name: 'PAINE',
       fk_id_region: 1
     },
     {
-      name: 'San Bernardo',
+      name: 'SAN BERNARDO',
       fk_id_region: 1
     },
     {
-      name: 'Alhué',
+      name: 'ALHUÉ',
       fk_id_region: 1
     },
     {
-      name: 'Curacaví',
+      name: 'CURACAVÍ',
       fk_id_region: 1
     },
     {
-      name: 'María Pinto',
+      name: 'MARÍA PINTO',
       fk_id_region: 1
     },
     {
-      name: 'Melipilla',
+      name: 'MELIPILLA',
       fk_id_region: 1
     },
     {
-      name: 'San Pedro',
+      name: 'SAN PEDRO',
       fk_id_region: 1
     },
     {
-      name: 'El Monte',
+      name: 'EL MONTE',
       fk_id_region: 1
     },
     {
-      name: 'Isla de Maipo',
+      name: 'ISLA DE MAIPO',
       fk_id_region: 1
     },
     {
-      name: 'Padre Hurtado',
+      name: 'PADRE HURTADO',
       fk_id_region: 1
     },
     {
-      name: 'Peñaflor',
+      name: 'PEÑAFLOR',
       fk_id_region: 1
     },
     {
-      name: 'Talagante',
+      name: 'TALAGANTE',
       fk_id_region: 1
     }
   ], {})
