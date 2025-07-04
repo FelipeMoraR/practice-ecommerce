@@ -42,6 +42,16 @@ const User = sqDb.define('user', {
     allowNull: true,
     defaultValue: null
   },
+  lastUpdateBasicInfoUserByUser: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
+  },
+  lastUpdateUserByAdmin: {
+    type: DataTypes.DATE,
+    allowNull: true,
+    defaultValue: null
+  },
   fk_id_type_user: {
     type: DataTypes.INTEGER,
     allowNull: true

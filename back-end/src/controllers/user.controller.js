@@ -18,6 +18,7 @@ import { saveLogController } from './logger.controller.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
+// TODO Verefy proxy
 // TODO Generate integration test, end-to-end and unit tests for all controllers.
 // TODO User can change some values, but one time per 60 days
 
@@ -48,6 +49,7 @@ const handlerGetPostalCode = async (street, number, comune) => {
 
 // NOTE Basic login logic
 export const loginUserController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null // NOTE CF-Connecting-IP because i will upload in cloudefare
   try {
     const { email, password } = req.body
 
@@ -61,13 +63,13 @@ export const loginUserController = async (req, res) => {
 
       const passwordIsValid = await bcrypt.compare(password, user.password)
       if (!passwordIsValid) {
-        await saveLogController('ERROR', 'Attemp to login but fails in autentication', email)
+        await saveLogController('ERROR', 'Attemp to login but fails in autentication', email, ip)
         throw new HttpError('Email or password invalid', 403)
       }
 
       // NOTE Spam controll to user verification
       if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
-        await saveLogController('WARNING', 'Attemp to login but user wasnt verified. Email was already sended', email)
+        await saveLogController('WARNING', 'Attemp to login but user wasnt verified. Email was already sended', email, ip)
         return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: true }
       }
 
@@ -77,7 +79,7 @@ export const loginUserController = async (req, res) => {
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
-        await saveLogController('AUDIT', 'Attemp to login but user wasnt verified. Email was sended', email)
+        await saveLogController('AUDIT', 'Attemp to login but user wasnt verified. Email was sended', email, ip)
 
         return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: false }
       }
@@ -110,7 +112,7 @@ export const loginUserController = async (req, res) => {
     if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Email has to be verified but an email was already sended. Wait a while...' })
     if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
 
-    await saveLogController('AUDIT', 'User login', email)
+    await saveLogController('AUDIT', 'User login', email, ip)
 
     return res
       .cookie('access_token', result.accessToken, {
@@ -129,7 +131,7 @@ export const loginUserController = async (req, res) => {
   } catch (error) {
     console.log('loginUserController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
-    if (error.message) await saveLogController('ERROR', 'loginUserController: ' + error.message)
+    if (error.message) await saveLogController('ERROR', 'loginUserController: ' + error.message, null, ip)
 
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
@@ -137,13 +139,15 @@ export const loginUserController = async (req, res) => {
 
 export const registerUserController = async (req, res) => {
   const startTime = performance.now()
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     const { email, password, name, lastName } = req.body
     await sqDb.transaction(async () => {
       // NOTE Prev validations
       const userExist = await User.findOne({ where: { email } })
       if (userExist) {
-        await saveLogController('WARNING', 'User tried to register but he already has an account', email)
+        await saveLogController('WARNING', 'User tried to register but he already has an account', email, ip)
         throw new HttpError('User already exist', 409)
       }
 
@@ -153,23 +157,23 @@ export const registerUserController = async (req, res) => {
       const newUser = await User.create({ id, email, password: hashedPassword, name, lastName, fk_id_type_user: 2 })
 
       // NOTE Generate token, endpoint and sending email
-      // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
+      // NOTE This will be controlled in the front, we extract the token as a param and validate with the confirmEmailVerificationController
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
-      await saveLogController('AUDIT', 'verification email Sended', email)
+      await saveLogController('AUDIT', 'verification email Sended', email, ip)
     })
     const endTime = performance.now()
-    await saveLogController('AUDIT', `User registered, time performance ${endTime - startTime}`, email)
+    await saveLogController('AUDIT', `User registered, time performance ${endTime - startTime}`, email, ip)
     return res.status(200).send({ status: 200, message: 'User Created!!!' })
   } catch (error) {
     // NOTE Dont send all the info of error.
     const endTime = performance.now()
-    await saveLogController('AUDIT', `Time to register and fail ${endTime - startTime}`)
+    await saveLogController('AUDIT', `Time to register and fail ${endTime - startTime}`, null, ip)
 
     console.error('registerUserController::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
-    if (error.message) await saveLogController('ERROR', 'registerUserController: ' + error.message)
+    if (error.message) await saveLogController('ERROR', 'registerUserController: ' + error.message, null, ip)
 
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
@@ -177,6 +181,8 @@ export const registerUserController = async (req, res) => {
 
 // ANCHOR This return a 401 be carefull
 export const logoutUserController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     await sqDb.transaction(async () => {
       const cookieRefreshTokenBrowser = req.cookies.refresh_token
@@ -185,11 +191,11 @@ export const logoutUserController = async (req, res) => {
 
       const userData = await User.findByPk(tokenData.id)
       if (!userData) {
-        await saveLogController('ERROR', 'Trying to logout with a id user that do not exist')
+        await saveLogController('ERROR', 'Trying to logout with a id user that do not exist', null, ip)
         throw new HttpError('User not exist', 404)
       }
 
-      await saveLogController('AUDIT', 'User logout', userData.email)
+      await saveLogController('AUDIT', 'User logout', userData.email, ip)
       const tokenIsValid = await TokenWhiteList.findByPk(tokenData.jti)
       if (!tokenIsValid) throw new HttpError('Token not exist in white list', 404)
       await TokenWhiteList.destroy({ where: { id: tokenData.jti } })
@@ -207,23 +213,27 @@ export const logoutUserController = async (req, res) => {
   } catch (error) {
     console.error('logoutUserController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
-    if (error.message) await saveLogController('ERROR', 'logoutUserController: ' + error.message)
+    if (error.message) await saveLogController('ERROR', 'logoutUserController: ' + error.message, null, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 // NOTE Email Verification
 export const confirmEmailVerificationController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     const statusVerification = await sqDb.transaction(async () => {
       // NOTE Token validation
       const token = req.params.token
-      if (!token) throw new HttpError('Token not found', 404)
 
       // NOTE User validation
       const data = jwt.verify(token, JWT_SECRET)
       const user = await User.findByPk(data.id)
-      if (!user) throw new HttpError('User not found', 404)
+      if (!user) {
+        await saveLogController('WARNING', 'Trying to use a token with a bad id user', null, ip)
+        throw new HttpError('User not found', 404)
+      }
       if (user.isVerified) return 304
 
       // NOTE Extract the actual time
@@ -231,7 +241,7 @@ export const confirmEmailVerificationController = async (req, res) => {
 
       // NOTE updating verification
       await User.update({ isVerified: true, updateAt: now }, { where: { id: data.id } })
-      await saveLogController('AUDIT', 'User verified his email', user.email)
+      await saveLogController('AUDIT', 'User verified his email', user.email, ip)
 
       return 200
     })
@@ -244,16 +254,18 @@ export const confirmEmailVerificationController = async (req, res) => {
   } catch (error) {
     console.log('confirmEmailController::: ', error)
     if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
-      await saveLogController('ERROR', 'confirmEmailVerificationController: ' + error.message)
+      await saveLogController('ERROR', 'confirmEmailVerificationController: ' + error.message, null, ip)
       return res.status(498).send({ status: 498, message: error.message })
     }
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
-    if (error.message) await saveLogController('ERROR', 'confirmEmailVerificationController: ' + error.message)
+    if (error.message) await saveLogController('ERROR', 'confirmEmailVerificationController: ' + error.message, null, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const sendEmailVerificationController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     const statusVerification = await sqDb.transaction(async () => {
       // NOTE extract the actual date FROM DB
@@ -263,10 +275,14 @@ export const sendEmailVerificationController = async (req, res) => {
       const userId = req.params.userId
       const user = await User.findOne({ where: { id: userId } })
       if (!user) throw new HttpError('User not found', 404)
-      if (user.isVerified) return 204
+      if (user.isVerified) {
+        await saveLogController('AUDIT', 'User is verified but tried to send another email', user.email, ip)
+        return 204
+      }
 
       // NOTE Spam controll
       if (!user.isVerified && (now - user.lastVerificationEmailSentAt) / 1000 <= 90) {
+        await saveLogController('AUDIT', 'User trying to send another verification email but is in cooldown', user.email, ip)
         throw new HttpError('Email sended, wait a moment', 403)
       }
 
@@ -275,6 +291,8 @@ export const sendEmailVerificationController = async (req, res) => {
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
       await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: userId } })
+      await saveLogController('INFO', 'User send a new email verification', user.email, ip)
+
       return 200
     })
 
@@ -282,12 +300,15 @@ export const sendEmailVerificationController = async (req, res) => {
   } catch (error) {
     console.log('sendEmailVerificationController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'sendEmailVerificationController: ' + error.message, null, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 // NOTE Forgot password
 export const sendForgotPasswordEmailController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     const dataStatus = await sqDb.transaction(async () => {
       // NOTE extract the actual date FROM DB
@@ -296,11 +317,17 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       // NOTE Finding user
       const { email } = req.body
       const user = await User.findOne({ where: { email } })
-      if (!user) throw new HttpError('User not found', 404)
+      if (!user) {
+        await saveLogController('AUDIT', 'User trying to change password with a invalid email', email, ip)
+        throw new HttpError('User not found', 404)
+      }
 
       // NOTE Email verify spam controll
       // NOTE Remember user has to be verified to use the forgot password controller
-      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) throw new HttpError('The email to verify user was already sended, wait a moment...', 403)
+      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
+        await saveLogController('WARNING', 'User trying to send another verification email but is in cooldown', user.email, ip)
+        throw new HttpError('The email to verify user was already sended, wait a moment...', 403)
+      }
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
@@ -308,12 +335,16 @@ export const sendForgotPasswordEmailController = async (req, res) => {
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
 
         await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: user.id } })
+        await saveLogController('INFO', 'User send a new email verification', user.email, ip)
 
         return { status: 200, message: 'The email to verify user was sended' }
       }
 
-      // NOTE Spam controll
-      if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) throw new HttpError('The email to verify the forgot password was already sended, wait a moment...', 403)
+      // NOTE Spam controll forgot password
+      if (user.lastForgotPasswordSentAt && (now - user.lastForgotPasswordSentAt) / 1000 <= 90) {
+        await saveLogController('WARNING', 'User trying to send another forgot password email but is in cooldown', user.email, ip)
+        throw new HttpError('The email to verify the forgot password was already sended, wait a moment...', 403)
+      }
 
       // NOTE Unvalidating all old reset password tokens
       const allOldTokens = await TokenWhiteList.findAll({ where: { fk_id_user: user.id, fk_id_type_token: 1 } })
@@ -324,7 +355,8 @@ export const sendForgotPasswordEmailController = async (req, res) => {
           await TokenBlackList.create({ id: idTokenBlackList, token: oldToken.token, fk_id_user: user.id, fk_id_type_token: 1 })
         })
       }
-      // NOTE Saving a new one
+
+      // NOTE Saving a new one token forgot password
       const idResetTokenWhiteList = crypto.randomUUID()
       const passwordResetTokenJwt = jwt.sign(
         { id: user.id, jti: idResetTokenWhiteList, type: 'passwordReset' },
@@ -350,20 +382,24 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       await sendEmail(user.email, endpoint, user.name, user.lastName)
 
       await User.update({ lastForgotPasswordSentAt: now, updateAt: now }, { where: { id: user.id } })
+      await saveLogController('INFO', 'User sended a new email to retrieve his password', user.email, ip)
 
       return { status: 200, message: 'The email to verify the forgot password was sended' }
     })
 
     return res.status(dataStatus.status).send({ status: dataStatus.status, message: dataStatus.message })
   } catch (error) {
-    console.log('forgotPasswordSendEmailController::: ', error)
+    console.log('sendForgotPasswordEmailController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'sendForgotPasswordEmailController: ' + error.message, null, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 // ANCHOR This return a 401 be carefull
 export const changePasswordController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     await sqDb.transaction(async () => {
       const { token, secret, newPassword } = req.body
@@ -371,20 +407,32 @@ export const changePasswordController = async (req, res) => {
       const dataToken = jwt.verify(token, JWT_SECRET)
 
       const tokenIsBanned = await TokenBlackList.findByPk(dataToken.jti)
-      if (tokenIsBanned) throw new HttpError('Token is banned', 401)
+      if (tokenIsBanned) {
+        await saveLogController('AUDIT', 'Attempt to use a banned token to change password', null, ip)
+        throw new HttpError('Token is banned', 401)
+      }
 
       // NOTE Validating token in whiteList
       const tokenInWhiteList = await TokenWhiteList.findOne({ where: { fk_id_user: dataToken.id, fk_id_type_token: 1 } })
-      if (!tokenInWhiteList) throw new HttpError('Token doesnt exist', 404)
+      if (!tokenInWhiteList) {
+        await saveLogController('AUDIT', 'Attempt to use an invalid token to change password', null, ip)
+        throw new HttpError('Token doesnt exist', 404)
+      }
 
       const isSecretMatch = await bcrypt.compare(secret, tokenInWhiteList.token)
-      if (!isSecretMatch) throw new HttpError('Invalid secret', 401)
+      if (!isSecretMatch) {
+        await saveLogController('AUDIT', 'Attempt to use an invalid secret to change password', null, ip)
+        throw new HttpError('Invalid secret', 401)
+      }
 
       // NOTE Validating the new password
       const user = await User.findByPk(dataToken.id)
       if (!user) throw new HttpError('User do not exist', 404)
       const newPasswordIsNotNew = await bcrypt.compare(newPassword, user.password)
-      if (newPasswordIsNotNew) throw new HttpError('New password have to be new', 422)
+      if (newPasswordIsNotNew) {
+        await saveLogController('AUDIT', 'Attempt to use the old password to change password', user.email, ip)
+        throw new HttpError('New password have to be new', 422)
+      }
 
       // NOTE Creating new password encripted
       const hashedPassword = await bcrypt.hash(newPassword, salty)
@@ -395,6 +443,8 @@ export const changePasswordController = async (req, res) => {
       await TokenWhiteList.destroy({ where: { id: tokenInWhiteList.id } })
       await TokenBlackList.create({ id: tokenInWhiteList.id, token: tokenInWhiteList.token, fk_id_user: tokenInWhiteList.fk_id_user, fk_id_type_token: tokenInWhiteList.fk_id_type_token })
       await User.update({ password: hashedPassword, updatedAt: now }, { where: { id: user.id } })
+
+      await saveLogController('INFO', 'User change password correctly', user.email, ip)
     })
 
     return res.status(200).send({
@@ -403,15 +453,20 @@ export const changePasswordController = async (req, res) => {
     })
   } catch (error) {
     console.log('changePasswordController::: ', error)
-    if (error.name === 'JsonWebTokenError') return res.status(498).send({ status: 498, message: error.message })
-    if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
+    if (error.name === 'JsonWebTokenError' || error.name === 'TokenExpiredError') {
+      await saveLogController('ERROR', 'changePasswordController: ' + error.message, null, ip)
+      return res.status(498).send({ status: 498, message: error.message })
+    }
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'changePasswordController: ' + error.message, null, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 // NOTE User data
 export const viewUserController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     const user = await sqDb.transaction(async () => {
       const { id } = req.userSession
@@ -436,12 +491,14 @@ export const viewUserController = async (req, res) => {
   } catch (error) {
     console.log('viewUserController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'viewUserController: ' + error.message, null, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
-// TODO Test this because i add a new thingin adressIsRepeated
 export const addUserAddressController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
@@ -452,41 +509,59 @@ export const addUserAddressController = async (req, res) => {
       const { street, number, numDpto, postalCode, idCommune } = req.body
 
       const comunneExist = await Commune.findByPk(idCommune)
-      if (!comunneExist) throw new HttpError('Commune not exist in table', 404)
+      if (!comunneExist) {
+        await saveLogController('AUDIT', 'Trying to use an invalid commune id', user.email, ip)
+        throw new HttpError('Commune not exist in table', 404)
+      }
 
       const { count } = await UserAddress.findAndCountAll({ where: { fk_id_user: idUser } })
 
-      if (count >= 3) throw new HttpError('Limit address reached', 409)
+      if (count >= 3) {
+        await saveLogController('AUDIT', 'User trying to add a new address but he reatches the limit', user.email, ip)
+        throw new HttpError('Limit address reached', 409)
+      }
 
       const addressIsRepeated = await UserAddress.findOne({ include: { model: Address, where: { street, number, numDpto, fk_id_commune: idCommune } }, where: { fk_id_user: idUser } })
-      if (addressIsRepeated) throw new HttpError('That address was already saved', 409)
+      if (addressIsRepeated) {
+        await saveLogController('AUDIT', 'User trying to add a new address but he already has one equal', user.email, ip)
+        throw new HttpError('That address was already saved', 409)
+      }
 
       const postalCodeResponse = await handlerGetPostalCode(street, number, comunneExist.name)
 
       if (!postalCodeResponse || postalCodeResponse.status) {
         const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
         const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+        await saveLogController('ERROR', postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code', user.email, ip)
         throw new HttpError(errorMessage, errorStatus)
       }
 
-      if (postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
+      if (postalCode !== postalCodeResponse.codigoPostal) {
+        await saveLogController('ERROR', 'User sent an invalid postal code', user.email, ip)
+        throw new HttpError('Postal code provided not valid', 403)
+      }
 
       const idAddress = crypto.randomUUID()
       const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, postalCode, fk_id_commune: idCommune })
       const newNameUserAddress = user.name + 'Address'
       const newIdForUserAdress = crypto.randomUUID()
       await UserAddress.create({ id: newIdForUserAdress, name: newNameUserAddress, fk_id_user: idUser, fk_id_address: newUserAddress.id })
+      await saveLogController('INFO', 'User saved a new address', user.email, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'User address updated!!!' })
   } catch (error) {
     console.log('addUserAddressController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'addUserAddressController: ' + error.message, null, ip)
+
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const updateUserAddressController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
@@ -497,7 +572,13 @@ export const updateUserAddressController = async (req, res) => {
       if (!user) throw new HttpError('User not found', 404)
 
       const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress }, include: { model: Address, include: { model: Commune } } })
-      if (!userAddressExist) throw new HttpError('Address not found', 404)
+      if (!userAddressExist) {
+        await saveLogController('AUDIT', 'User tried to update a non-exist address', user.email, ip)
+        throw new HttpError('Address not found', 404)
+      }
+
+      // NOTE Extract the actual time
+      const now = await handlerExtractUtcTimestamp()
 
       // NOTE This allow flexibility to the front and send only the info that change
       const valuesToUpdate = {
@@ -505,16 +586,23 @@ export const updateUserAddressController = async (req, res) => {
         number: number || userAddressExist.address.number,
         numDpto: numDpto || userAddressExist.address.numDpto,
         postalCode: postalCode || userAddressExist.address.postalCode,
+        updatedAt: now,
         fk_id_commune: idCommune || userAddressExist.address.fk_id_commune
       }
 
       const addressIsRepeated = await UserAddress.findOne({ include: { model: Address, where: { street: valuesToUpdate.street, number: valuesToUpdate.number, numDpto: valuesToUpdate.numDpto, fk_id_commune: valuesToUpdate.fk_id_commune } }, where: { fk_id_user: idUser } })
-      if (addressIsRepeated) throw new HttpError('That address was already saved to the user', 409)
+      if (addressIsRepeated) {
+        await saveLogController('AUDIT', 'User attempted to update to an existing address', user.email, ip)
+        throw new HttpError('That address was already saved to the user', 409)
+      }
 
       let newCommuneExist = null
       if (idCommune) {
         newCommuneExist = await Commune.findByPk(idCommune)
-        if (!newCommuneExist) throw new HttpError('Commune not exist in table', 404)
+        if (!newCommuneExist) {
+          await saveLogController('AUDIT', 'User tried to use an invalid id commune', user.email, ip)
+          throw new HttpError('Commune not exist in table', 404)
+        }
         valuesToUpdate.fk_id_commune = newCommuneExist.id
       }
 
@@ -524,44 +612,61 @@ export const updateUserAddressController = async (req, res) => {
         if (!postalCodeResponse || postalCodeResponse.status) {
           const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
           const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+          await saveLogController('ERROR', postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code', user.email, ip)
           throw new HttpError(errorMessage, errorStatus)
         }
 
-        if (valuesToUpdate.postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
+        if (valuesToUpdate.postalCode !== postalCodeResponse.codigoPostal) {
+          await saveLogController('ERROR', 'User sent an invalid postal code', user.email, ip)
+          throw new HttpError('Postal code provided not valid', 403)
+        }
       }
 
       await Address.update(valuesToUpdate, { where: { id: idAddress } })
+      await saveLogController('INGO', 'User updated an address', user.email, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'Address updated!' })
   } catch (error) {
     console.log('updateUserAddressController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'updateUserAddressController: ' + error.message, null, ip)
+
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const deleteUserAddressController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
       const idAddress = req.params.idAddress
 
       const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
-      if (!userAddressExist) throw new HttpError('Address not found', 404)
+      if (!userAddressExist) {
+        await saveLogController('AUDIT', 'Attempt to delete an address with bad values', null, ip)
+        throw new HttpError('Address not found', 404)
+      }
 
       await UserAddress.destroy({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
       await Address.destroy({ where: { id: idAddress } })
+      await saveLogController('INFO', 'User address deleted', null, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'Address deleted' })
   } catch (error) {
+    console.log('deleteUserAddressController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'deleteUserAddressController: ' + error.message, null, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const updateUserPhoneController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+
   try {
     await sqDb.transaction(async () => {
       const { id: idUser } = req.userSession
@@ -569,9 +674,13 @@ export const updateUserPhoneController = async (req, res) => {
       const user = await User.findByPk(idUser)
       if (!user) throw new HttpError('User not found', 404)
 
+      // NOTE Extract the actual time
+      const now = await handlerExtractUtcTimestamp()
+
       const { phone } = req.body
 
-      await User.update({ phone }, { where: { id: idUser } })
+      await User.update({ phone, updatedAt: now }, { where: { id: idUser } })
+      await saveLogController('INFO', 'User phone updated', user.email, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'Phone user updated' })
@@ -584,6 +693,10 @@ export const updateUserPhoneController = async (req, res) => {
 
 // NOTE Admin basic crud
 export const getAllClientsController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+  const { email: adminEmail } = req.adminSession
+  await saveLogController('AUDIT', 'Attemp to view all clients', adminEmail, ip)
+
   try {
     const { page = 0, size = 10, search = '', order = 'asc(name)' } = req.query
     const searchSpaces = search.split(' ')
@@ -657,16 +770,24 @@ export const getAllClientsController = async (req, res) => {
       newUserToSave.addresses = addressesParsed
       return newUserToSave
     })
-
+    await saveLogController('INFO', 'Admin could see the clients', adminEmail, ip)
     return res.status(200).send({ status: 200, data: dataParsed, count: resultUser.count, size: Number(size), page: page * size })
   } catch (error) {
     console.log('getAllClientsController: ', error)
-    if (error.parent.errno === 1054) return res.status(400).send({ status: 400, message: 'Bad field error' })
+    if (error.parent.errno === 1054) {
+      await saveLogController('ERROR', 'Bad field error', adminEmail, ip)
+      return res.status(400).send({ status: 400, message: 'Bad field error' })
+    }
+    if (error.name) await saveLogController('ERROR', 'getAllClientsController: ' + error.message, adminEmail, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const createClientController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+  const { email: adminEmail } = req.adminSession
+  await saveLogController('AUDIT', 'Attemp to create a client', adminEmail, ip)
+
   try {
     await sqDb.transaction(async () => {
       // NOTE Prev validations
@@ -683,6 +804,7 @@ export const createClientController = async (req, res) => {
       // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
+      await saveLogController('INFO', 'Admin was able to created a new client', adminEmail, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'User Created!!!' })
@@ -691,13 +813,17 @@ export const createClientController = async (req, res) => {
     console.error('createClientController::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
-
+    if (error.message) await saveLogController('ERROR', 'createClientController: ' + error.message, adminEmail, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 // TODO Front has to send a confirmation of the action, like "U sure of deleting this user? This cant ne undone "
 export const deleteClientController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+  const { email: adminEmail } = req.adminSession
+  await saveLogController('AUDIT', 'Attemp to eliminate a client', adminEmail, ip)
+
   try {
     await sqDb.transaction(async () => {
       const userId = req.params.userId
@@ -709,23 +835,31 @@ export const deleteClientController = async (req, res) => {
       // NOTE User not has address
       if (userAddresses.length < 1) {
         await User.destroy({ where: { id: userId } })
+        await saveLogController('AUDIT', 'Admin was able to delete an user and that user didnt have any addresses saved', adminEmail, ip)
         return
       }
 
       const addressPromises = userAddresses.map(el => Address.destroy({ where: { id: el.fk_id_address } }))
       await Promise.all(addressPromises)
       await User.destroy({ where: { id: userId } })
+      await saveLogController('AUDIT', 'Admin was able to delete an user and his addresses', adminEmail, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'User deleted!' })
   } catch (error) {
+    console.log('deleteClientController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'deleteClientController: ' + error.message, adminEmail, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 // NOTE Generate two controllers, one to update address, and other to update only personal info
 export const updateBasicClientInfoController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+  const { email: adminEmail } = req.adminSession
+  await saveLogController('AUDIT', 'Attemp to update the basic info of a client', adminEmail, ip)
+
   try {
     await sqDb.transaction(async () => {
       const { id, email, password, name, lastName, phone } = req.body
@@ -734,16 +868,26 @@ export const updateBasicClientInfoController = async (req, res) => {
 
       if (email) {
         const emailAlreadyUsed = await User.findOne({ where: { [Op.and]: [{ email }, { id: { [Op.ne]: id } }] } })
-        if (emailAlreadyUsed) throw new HttpError('Email not valid, other user already logged with that email', 409)
+        if (emailAlreadyUsed) {
+          await saveLogController('AUDIT', 'Admin tried to update the email with an email that already exist', adminEmail, ip)
+          throw new HttpError('Email not valid, other user already logged with that email', 409)
+        }
       }
       const userExist = await User.findByPk(id)
-      if (!userExist) throw new HttpError('User not found', 404)
+      if (!userExist) {
+        await saveLogController('AUDIT', 'Admin tried to update an user that doesnt exist', adminEmail, ip)
+        throw new HttpError('User not found', 404)
+      }
 
       let passwordToSave = userExist.password
 
       if (password) {
         passwordToSave = await bcrypt.hash(password, salty)
+        await saveLogController('AUDIT', 'Admin updated the password of the client', adminEmail, ip)
       }
+
+      // NOTE Extract the actual time
+      const now = await handlerExtractUtcTimestamp()
 
       const valuesToUpdate = {
         email: email || userExist.email,
@@ -751,31 +895,47 @@ export const updateBasicClientInfoController = async (req, res) => {
         name: name || userExist.name,
         lastName: lastName || userExist.lastName,
         phone: phone || userExist.phone,
+        updatedAt: now,
         isVerified: userExist.isVerified ? (!email) : false
       }
 
       await User.update(valuesToUpdate, { where: { id } })
+      await saveLogController('INFO', 'Admin was able to update the client', adminEmail, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'User personal info updated!' })
   } catch (error) {
+    console.log('updateBasicClientInfoController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'updateBasicClientInfoController: ' + error.message, adminEmail, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
-// TODO Test this
 export const updateAddressClientInfoController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+  const { email: adminEmail } = req.adminSession
+  await saveLogController('AUDIT', 'Attemp to update the address info of a client', adminEmail, ip)
+
   try {
     await sqDb.transaction(async () => {
       const { idUser, idAddress, street, number, numDpto, postalCode, idCommune } = req.body
       if (!street && !number && !numDpto && !postalCode && !idCommune) throw new HttpError('Not modified', 304)
 
       const user = await User.findByPk(idUser)
-      if (!user) throw new HttpError('User not found', 404)
+      if (!user) {
+        await saveLogController('AUDIT', 'Admin tried to update an user that doesnt exist', adminEmail, ip)
+        throw new HttpError('User not found', 404)
+      }
 
       const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress }, include: { model: Address, include: { model: Commune } } })
-      if (!userAddressExist) throw new HttpError('Address not found', 404)
+      if (!userAddressExist) {
+        await saveLogController('AUDIT', 'Admin tried to update an address that doesnt exist', adminEmail, ip)
+        throw new HttpError('Address not found', 404)
+      }
+
+      // NOTE Extract the actual time
+      const now = await handlerExtractUtcTimestamp()
 
       // NOTE This allow flexibility to the front and send only the info that change
       const valuesToUpdate = {
@@ -783,16 +943,23 @@ export const updateAddressClientInfoController = async (req, res) => {
         number: number || userAddressExist.address.number,
         numDpto: numDpto || userAddressExist.address.numDpto,
         postalCode: postalCode || userAddressExist.address.postalCode,
+        updatedAt: now,
         fk_id_commune: idCommune || userAddressExist.address.fk_id_commune
       }
 
       const addressIsRepeated = await UserAddress.findOne({ include: { model: Address, where: { street: valuesToUpdate.street, number: valuesToUpdate.number, numDpto: valuesToUpdate.numDpto, fk_id_commune: valuesToUpdate.fk_id_commune } }, where: { fk_id_user: idUser } })
-      if (addressIsRepeated) throw new HttpError('That address was already saved to the user', 409)
+      if (addressIsRepeated) {
+        await saveLogController('AUDIT', 'Admin tried to update an address to an existing one', adminEmail, ip)
+        throw new HttpError('That address was already saved to the user', 409)
+      }
 
       let newCommuneExist = null
       if (idCommune) {
         newCommuneExist = await Commune.findByPk(idCommune)
-        if (!newCommuneExist) throw new HttpError('Commune not exist in table', 404)
+        if (!newCommuneExist) {
+          await saveLogController('AUDIT', 'Admin tried to use an invalid id commune', adminEmail, ip)
+          throw new HttpError('Commune not exist in table', 404)
+        }
         valuesToUpdate.fk_id_commune = newCommuneExist.id
       }
 
@@ -802,39 +969,54 @@ export const updateAddressClientInfoController = async (req, res) => {
         if (!postalCodeResponse || postalCodeResponse.status) {
           const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
           const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+          await saveLogController('ERROR', postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code', adminEmail, ip)
           throw new HttpError(errorMessage, errorStatus)
         }
 
-        if (valuesToUpdate.postalCode !== postalCodeResponse.codigoPostal) throw new HttpError('Postal code provided not valid', 403)
+        if (valuesToUpdate.postalCode !== postalCodeResponse.codigoPostal) {
+          await saveLogController('ERROR', 'Admin sent an invalid postal code', adminEmail, ip)
+          throw new HttpError('Postal code provided not valid', 403)
+        }
       }
 
       await Address.update(valuesToUpdate, { where: { id: idAddress } })
+      await saveLogController('INFO', 'Admin was able to update an address', adminEmail, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'User address updated!' })
   } catch (error) {
     console.log('updateAddressClientInfoController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'updateAddressClientInfoController: ' + error.message, adminEmail, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }
 
 export const deleteAddressClientController = async (req, res) => {
+  const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
+  const { email: adminEmail } = req.adminSession
+  await saveLogController('AUDIT', 'Attemp to delete an address of a client', adminEmail, ip)
+
   try {
     await sqDb.transaction(async () => {
       const idAddress = req.params.idAddress
       const idUser = req.params.idUser
 
       const userAddressExist = await UserAddress.findOne({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
-      if (!userAddressExist) throw new HttpError('Address not found', 404)
+      if (!userAddressExist) {
+        await saveLogController('AUDIT', 'Admin tried to delete an non-existing address', adminEmail, ip)
+        throw new HttpError('Address not found', 404)
+      }
 
       await UserAddress.destroy({ where: { fk_id_user: idUser, fk_id_address: idAddress } })
       await Address.destroy({ where: { id: idAddress } })
+      await saveLogController('INFO', 'Admin was able to delete an address', adminEmail, ip)
     })
 
     return res.status(200).send({ status: 200, message: 'Address deleted' })
   } catch (error) {
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
+    if (error.message) await saveLogController('ERROR', 'updateAddressClientInfoController: ' + error.message, adminEmail, ip)
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }
 }

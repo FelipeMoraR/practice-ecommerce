@@ -26,6 +26,8 @@ export const adminRoute = async (req, res, next) => {
     if (!user) throw new HttpError('User not exist', 404)
     if (user.fk_id_type_user !== 1) throw new HttpError('User has to be admin', 401)
 
+    req.adminSession = { id: user.id, email: user.email }
+
     next()
   } catch (error) {
     console.log('adminRoute: ', error)

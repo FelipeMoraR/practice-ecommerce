@@ -15,7 +15,7 @@ const Logger = sqDbLogger.define('logger', {
     allowNull: false
   },
   ip_address: {
-    type: DataTypes.STRING(10),
+    type: DataTypes.STRING(20),
     allowNull: true,
     defaultValue: null
   },
