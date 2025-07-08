@@ -13,6 +13,10 @@ const TokenWhiteList = sqDb.define('tokenwhitelist', {
     type: DataTypes.STRING(500),
     allowNull: false
   },
+  id_device: {
+    type: DataTypes.STRING(100),
+    allowNull: false
+  },
   expDate: {
     type: DataTypes.DATE,
     allowNull: false

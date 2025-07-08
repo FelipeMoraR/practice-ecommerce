@@ -21,6 +21,7 @@ const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 // TODO Verify proxy
 // TODO Generate integration test, end-to-end and unit tests for all controllers.
 // TODO User can change some values, but one time per 60 days
+// REVIEW Id device has to be seted in the client, and the backend ensures that id in a cookie
 
 // NOTE Handlers
 const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, customEndpoint, expiredIn, customToken) => {
@@ -48,14 +49,14 @@ const handlerGetPostalCode = async (street, number, comune) => {
 }
 
 // NOTE Basic login logic
-// FIXME Problem when the user spam the login endpoint in the same ip
-// TODO Solution, the client has to send the device id and we have to save it in db, in case they remove this id we have to controll the trash with a cron
-// TODO Update whiteListToken and add this new colummn of device id and change this controller to handle that
-// TODO Private middleware has to be fixed with this
 export const loginUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null // NOTE CF-Connecting-IP because i will upload in cloudefare
   try {
     const { email, password } = req.body
+    const deviceIdReceived = req.cookies.id_device || req.body.deviceId || null
+    const isFirstTimeDevice = !req.cookies.id_device
+
+    if (!deviceIdReceived) throw new HttpError('Id device not seted', 403)
 
     const result = await sqDb.transaction(async () => {
       // NOTE extract the actual date FROM DB
@@ -74,7 +75,7 @@ export const loginUserController = async (req, res) => {
       // NOTE Spam controll to user verification
       if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
         await saveLogController('WARNING', 'Attemp to login but user wasnt verified. Email was already sended', email, ip)
-        return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: true }
+        return { accessToken: null, refreshToken: null, deviceId: null, isVerified: user.isVerified, emailSendInCooldown: true }
       }
 
       // NOTE Sending email in case user isn't verified
@@ -85,7 +86,7 @@ export const loginUserController = async (req, res) => {
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
         await saveLogController('AUDIT', 'Attemp to login but user wasnt verified. Email was sended', email, ip)
 
-        return { accessToken: null, refreshToken: null, isVerified: user.isVerified, emailSendInCooldown: false }
+        return { accessToken: null, refreshToken: null, deviceId: null, isVerified: user.isVerified, emailSendInCooldown: false }
       }
 
       // NOTE Generate access tokens
@@ -103,22 +104,41 @@ export const loginUserController = async (req, res) => {
           expiresIn: '7d'
         })
 
+      if (!isFirstTimeDevice) {
+        await saveLogController('AUDIT', 'User try to login again with the same device', email, ip)
+        const oldTokenInWhiteList = await TokenWhiteList.findOne({ where: { id_device: deviceIdReceived } })
+
+        if (oldTokenInWhiteList) {
+          const oldToken = jwt.decode(oldTokenInWhiteList.token)
+          const expOldToken = new Date(oldToken.exp * 1000)
+          await TokenWhiteList.destroy({ where: { id_device: deviceIdReceived } })
+          const idNewBlackListToken = crypto.randomUUID()
+          await TokenBlackList.create({ id: idNewBlackListToken, token: oldTokenInWhiteList.token, expDate: expOldToken, fk_id_user: oldTokenInWhiteList.fk_id_user, fk_id_type_token: 2 })
+        }
+      }
+
       // NOTE Saving token in white list
       const dataRefreshToken = jwt.decode(refreshToken)
       const expRefreshToken = new Date(dataRefreshToken.exp * 1000)
 
       // NOTE type 2 is for refresh token
-      await TokenWhiteList.create({ id: idRefreshToken, token: refreshToken, expDate: expRefreshToken, fk_id_user: user.id, fk_id_type_token: 2 })
+      await TokenWhiteList.create({ id: idRefreshToken, token: refreshToken, id_device: deviceIdReceived, expDate: expRefreshToken, fk_id_user: user.id, fk_id_type_token: 2 })
 
-      return { accessToken, refreshToken, isVerified: user.isVerified }
+      return { accessToken, refreshToken, deviceId: deviceIdReceived, isVerified: user.isVerified }
     })
 
     if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Email has to be verified but an email was already sended. Wait a while...' })
     if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
 
-    await saveLogController('AUDIT', 'User login', email, ip)
+    await saveLogController('AUDIT', 'User loged successfull', email, ip)
 
     return res
+      .cookie('id_device', result.deviceId, {
+        httpOnly: true,
+        secure: NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 1000 * 60 * 60 * 24 * 365 // 365 days
+      })
       .cookie('access_token', result.accessToken, {
         httpOnly: true,
         secure: NODE_ENV === 'production',
@@ -129,7 +149,7 @@ export const loginUserController = async (req, res) => {
         httpOnly: true,
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 hours
+        maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
       })
       .send({ status: 200, message: 'User logged!!!' })
   } catch (error) {
@@ -212,6 +232,7 @@ export const logoutUserController = async (req, res) => {
     return res
       .clearCookie('access_token')
       .clearCookie('refresh_token')
+      .clearCookie('id_device')
       .status(200)
       .send({ status: 200, message: 'Logout successful' })
   } catch (error) {
@@ -320,6 +341,10 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Finding user
       const { email } = req.body
+      const deviceIdReceived = req.cookies.id_device || req.body.deviceId || null
+
+      if (!deviceIdReceived) throw new HttpError('Id device not seted', 403)
+
       const user = await User.findOne({ where: { email } })
       if (!user) {
         await saveLogController('AUDIT', 'User trying to change password with a invalid email', email, ip)
@@ -375,6 +400,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       await TokenWhiteList.create({
         id: idResetTokenWhiteList,
         token: hashedResetToken,
+        id_device: deviceIdReceived,
         expDate: new Date(decodeResetTokenJwt.exp * 1000),
         fk_id_user: user.id,
         fk_id_type_token: 1

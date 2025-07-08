@@ -24,7 +24,8 @@ const blockedDomains = [
 
 export const loginSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250'),
-  password: z.string().min(1, 'Password is required')
+  password: z.string().min(1, 'Password is required'),
+  deviceId: z.number().optional()
 })
 
 export const registerSchema = z.object({
@@ -100,8 +101,9 @@ export const registerSchema = z.object({
     }
   })
 
-export const emailSchema = z.object({
-  email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250')
+export const sendForgotPasswordEmailSchema = z.object({
+  email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250'),
+  deviceId: z.number().optional()
 }).refine((data) => {
   const emailDomain = data.email.split('@')[1]?.toLowerCase()
   return emailDomain && !blockedDomains.includes(emailDomain)

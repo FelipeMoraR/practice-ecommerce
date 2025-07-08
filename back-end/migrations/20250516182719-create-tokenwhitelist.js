@@ -12,6 +12,10 @@ export async function up (queryInterface, Sequelize) {
       type: Sequelize.STRING(500),
       allowNull: false
     },
+    id_device: {
+      type: Sequelize.STRING(100),
+      allowNull: false
+    },
     expDate: {
       type: Sequelize.DATE,
       allowNull: false
