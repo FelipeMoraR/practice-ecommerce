@@ -22,8 +22,8 @@ export const tokenBlackListCleaner = () => {
 
 export const tokenWhiteListCleaner = () => {
   try {
-    // NOTE This will run every Friday at 3:00 AM (0 seconds, 0 minutes, 3 hours)
-    nodeCron.schedule('0 0 3 1 */3 5', async () => {
+    // NOTE This will run every monday at 3:00 AM (0 seconds, 0 minutes, 3 hours) in every month
+    nodeCron.schedule('0 0 3 * * 1', async () => {
       const now = await handlerExtractUtcTimestamp()
 
       sqDb.transaction(async () => {
