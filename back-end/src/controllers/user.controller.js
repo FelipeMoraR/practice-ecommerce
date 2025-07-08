@@ -50,6 +50,8 @@ const handlerGetPostalCode = async (street, number, comune) => {
 // NOTE Basic login logic
 // FIXME Problem when the user spam the login endpoint in the same ip
 // TODO Solution, the client has to send the device id and we have to save it in db, in case they remove this id we have to controll the trash with a cron
+// TODO Update whiteListToken and add this new colummn of device id and change this controller to handle that
+// TODO Private middleware has to be fixed with this
 export const loginUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null // NOTE CF-Connecting-IP because i will upload in cloudefare
   try {
