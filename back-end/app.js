@@ -7,6 +7,7 @@ import cors from 'cors'
 import rateLimit from 'express-rate-limit'
 import helmet from 'helmet'
 import { tokenBlackListCleaner, tokenWhiteListCleaner } from './src/services/cron.service.js'
+import { PORT } from './src/config/config.js'
 
 const app = express()
 const corsOptions = {
@@ -46,4 +47,13 @@ app.use((err, req, res, next) => {
 tokenBlackListCleaner()
 tokenWhiteListCleaner()
 
-export default app
+app.get('/', (req, res) => {
+  const currentTimeUTC = new Date().toISOString()
+  res.json({ currentTimeUTC })
+})
+
+const server = app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`)
+})
+
+export { server, app }

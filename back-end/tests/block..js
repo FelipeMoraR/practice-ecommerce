@@ -23,11 +23,11 @@ async function doPetition () {
 
 async function loadSimulator () {
   console.log(`Sending ${NUM_PETITIONS} to ${URL_SERVER}...`)
-  const promesas = []
+  const promises = []
   for (let i = 0; i < NUM_PETITIONS; i++) {
-    promesas.push(doPetition())
+    promises.push(doPetition())
   }
-  await Promise.all(promesas)
+  await Promise.all(promises)
   console.log('All petitions sended')
 }
 

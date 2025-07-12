@@ -52,7 +52,7 @@ export const sqDbLogger = new Sequelize(
   }
 )
 
-async function testConnection () {
+async function dbConnection () {
   try {
     await sqDb.authenticate()
     console.log('Database ecommerse connected. :)')
@@ -61,7 +61,7 @@ async function testConnection () {
   }
 }
 
-async function testConnectionLogger () {
+async function dbConnectionLogger () {
   try {
     await sqDbLogger.authenticate()
     console.log('Database Logger connected. :)')
@@ -70,5 +70,5 @@ async function testConnectionLogger () {
   }
 }
 
-testConnection()
-testConnectionLogger()
+await dbConnection()
+await dbConnectionLogger()

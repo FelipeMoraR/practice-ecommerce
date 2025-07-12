@@ -5,17 +5,24 @@ import handlerExtractUtcTimestamp from '../utils/extractUtcTimeStamp.js'
 import { Op } from 'sequelize'
 
 export const saveLogController = async (level, message, user = null, ip = null) => {
-  if (typeof level !== 'string' || typeof message !== 'string') throw new Error('savelogController: Level and message has to be strings')
-  if (level.trim() === '' || message.trim() === '') throw new Error('savelogController: Level and message cant be empty')
-  const validLevels = ['ERROR', 'INFO', 'AUDIT', 'PERFORMACE', 'WARNING']
-  const levelIsValid = validLevels.find(el => el === level)
+  try {
+    if (typeof level !== 'string' || typeof message !== 'string') throw new Error('savelogController: Level and message has to be strings')
+    if (level.trim() === '' || message.trim() === '') throw new Error('savelogController: Level and message cant be empty')
+    const validLevels = ['ERROR', 'INFO', 'AUDIT', 'PERFORMACE', 'WARNING']
+    const levelIsValid = validLevels.find(el => el === level)
 
-  if (!levelIsValid) throw new Error('savelogController: Level must be one of these => ERROR, INFO, AUDIT, PERFORMACE, WARNING')
+    if (!levelIsValid) {
+      console.log('Level invalid => ', level)
+      throw new Error('savelogController: Level must be one of these => ERROR, INFO, AUDIT, PERFORMACE, WARNING')
+    }
 
-  sqDbLogger.transaction(async () => {
-    const randomId = crypto.randomUUID()
-    await Logger.create({ id: randomId, level, message, user, ip_address: ip })
-  })
+    await sqDbLogger.transaction(async () => {
+      const randomId = crypto.randomUUID()
+      await Logger.create({ id: randomId, level, message, user, ip_address: ip })
+    })
+  } catch (error) {
+    console.log('saveLogController: ', error)
+  }
 }
 
 export const loggerCleaner = () => {
