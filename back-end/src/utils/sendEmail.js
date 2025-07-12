@@ -1,14 +1,14 @@
 /* eslint-disable quotes */
 import { transporter, nodeMailer } from '../config/email.config.js'
 
-const sendEmail = async (email, endpoint, name, lastname) => {
+const sendEmail = async (email, endpoint, name, lastname, subject) => {
   try {
     const info = await transporter.sendMail({
-      from: '"Mi App (Mailtrap)" <no-reply@demomailtrap.co>',
+      from: '"purpleCommerce" <no-reply@demomailtrap.co>',
       to: email,
-      subject: 'Verify your email',
+      subject,
       text: `Hello ${name} ${lastname}!!!`,
-      html: `<b> <a href = "${endpoint}">Click here</a> to verify your email </b>`
+      html: `<a href = "${endpoint}"><b>Click here</b></a> to continue with the process`
     })
 
     console.log('Message sent: %s', info.messageId)

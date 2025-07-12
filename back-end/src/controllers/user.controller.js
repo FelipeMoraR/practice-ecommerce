@@ -20,11 +20,10 @@ const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // TODO Verify proxy
 // TODO Generate integration test, end-to-end and unit tests for all controllers.
-// TODO User can change some values, but one time per 60 days
 // REVIEW Id device has to be seted in the client, and the backend ensures that id in a cookie
 
 // NOTE Handlers
-const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, customEndpoint, expiredIn, customToken) => {
+const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastNameUser, customEndpoint, expiredIn, subject) => {
   const verifyToken = jwt.sign(
     { id: idUser },
     JWT_SECRET,
@@ -33,7 +32,7 @@ const handlerSendingEmailWithLink = async (idUser, emailUser, nameUser, lastName
 
   const endpointComplete = customEndpoint + verifyToken
 
-  await sendEmail(emailUser, endpointComplete, nameUser, lastNameUser)
+  await sendEmail(emailUser, endpointComplete, nameUser, lastNameUser, subject)
 }
 
 const handlerGetPostalCode = async (street, number, comune) => {
@@ -81,7 +80,7 @@ export const loginUserController = async (req, res) => {
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
         const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
-        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
+        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
         await saveLogController('AUDIT', 'Attemp to login but user wasnt verified. Email was sended', email, ip)
@@ -183,7 +182,7 @@ export const registerUserController = async (req, res) => {
       // NOTE Generate token, endpoint and sending email
       // NOTE This will be controlled in the front, we extract the token as a param and validate with the confirmEmailVerificationController
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
-      await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
+      await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m', 'Verify email')
       await saveLogController('AUDIT', 'verification email Sended', email, ip)
     })
     const endTime = performance.now()
@@ -313,7 +312,7 @@ export const sendEmailVerificationController = async (req, res) => {
 
       // NOTE Sending email
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
-      await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
+      await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
       await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: userId } })
       await saveLogController('INFO', 'User send a new email verification', user.email, ip)
@@ -361,7 +360,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
         const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
-        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m')
+        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Forgot password')
 
         await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: user.id } })
         await saveLogController('INFO', 'User send a new email verification', user.email, ip)
@@ -409,7 +408,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       // NOTE Sending email
       // TODO This has to be send to the update password form
       const endpoint = process.env.CUSTOM_DOMAIN + '/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
-      await sendEmail(user.email, endpoint, user.name, user.lastName)
+      await sendEmail(user.email, endpoint, user.name, user.lastName, 'Forgot password')
 
       await User.update({ lastForgotPasswordSentAt: now, updateAt: now }, { where: { id: user.id } })
       await saveLogController('INFO', 'User sended a new email to retrieve his password', user.email, ip)
@@ -614,7 +613,7 @@ export const updateUserPasswordController = async (req, res) => {
       if (!user) throw new HttpError('User not found', 404)
 
       const oldPasswordIsValid = await bcrypt.compare(oldPassword, user.password)
-      console.log('oldPasswordIsValid => ', oldPasswordIsValid)
+
       if (!oldPasswordIsValid) {
         await saveLogController('WARNING', 'User tried to change password and failed', user.email, ip)
         throw new HttpError('Old password not valid', 401)
@@ -930,7 +929,7 @@ export const createClientController = async (req, res) => {
       // NOTE Generate token, endpoint and sending email
       // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
-      await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m')
+      await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m', 'Verify email')
       await saveLogController('INFO', 'Admin was able to created a new client', adminEmail, ip)
     })
 

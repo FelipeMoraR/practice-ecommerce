@@ -3,6 +3,7 @@ import { sqDb } from '../config/db.config.js'
 import TokenBlackList from '../models/tokenBlackList.model.js'
 import TokenWhiteList from '../models/tokenWhiteList.model.js'
 import handlerExtractUtcTimestamp from '../utils/extractUtcTimeStamp.js'
+import { saveLogController } from '../controllers/logger.controller.js'
 import { Op } from 'sequelize'
 
 export const tokenBlackListCleaner = () => {
@@ -13,6 +14,7 @@ export const tokenBlackListCleaner = () => {
 
       sqDb.transaction(async () => {
         await TokenBlackList.destroy({ where: { createdAt: { [Op.lt]: now } } })
+        await saveLogController('AUDIT', 'Cleaning black list', null, null)
       })
     })
   } catch (error) {
@@ -30,15 +32,17 @@ export const tokenWhiteListCleaner = () => {
         const allexpiredWhiteToken = await TokenWhiteList.findAll({ where: { expDate: { [Op.lt]: now } } })
         if (allexpiredWhiteToken.length <= 0) {
           console.log('All token in white list are ok')
+          await saveLogController('AUDIT', 'Tried to clean the white list but it was empty', null, null)
           return
         }
-        allexpiredWhiteToken.forEach(async (token) => {
-          console.log(token)
+        const tokenExpiredPormises = allexpiredWhiteToken.map(token => {
           const newId = crypto.randomUUID()
-          await TokenBlackList.create({ id: newId, token: token.token, fk_id_user: token.fk_id_user, fk_id_type_token: token.fk_id_type_token })
+          return TokenBlackList.create({ id: newId, token: token.token, fk_id_user: token.fk_id_user, fk_id_type_token: token.fk_id_type_token })
         })
 
+        await Promise.all(tokenExpiredPormises)
         await TokenWhiteList.destroy({ where: { expDate: { [Op.lt]: now } } })
+        await saveLogController('AUDIT', 'Cleaning white list', null, null)
       })
     })
   } catch (error) {
