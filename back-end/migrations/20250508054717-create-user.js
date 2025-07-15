@@ -10,7 +10,8 @@ export async function up (queryInterface, Sequelize) {
     },
     email: {
       type: Sequelize.STRING(250),
-      allowNull: false
+      allowNull: false,
+      unique: true
     },
     password: {
       type: Sequelize.STRING(60),
