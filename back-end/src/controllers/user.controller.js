@@ -47,7 +47,7 @@ const handlerGetPostalCode = async (street, number, comune) => {
   }
 }
 
-// NOTE Basic login logic
+// NOTE login
 export const loginUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null // NOTE CF-Connecting-IP because i will upload in cloudefare
   try {

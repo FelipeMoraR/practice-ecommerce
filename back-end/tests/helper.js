@@ -22,6 +22,6 @@ export const getAllDataOfTable = async (model) => {
     })
   } catch (error) {
     console.log('cleaningTable: ', error)
-    return { count: 0, rows: null }
+    return { count: null, rows: null }
   }
 }

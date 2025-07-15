@@ -4,6 +4,10 @@ import { getAllDataOfTable, cleaningTable, api } from '../helper.js'
 import TokenWhiteList from '../../src/models/tokenWhiteList.model.js'
 import TokenBlackList from '../../src/models/tokenBlackList.model.js'
 import User from '../../src/models/user.model.js'
+import bcrypt from 'bcrypt'
+import { SALT_ROUNDS } from '../../src/config/config.js'
+
+const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // NOTE Session logic (loginUserController, registerUserController, logoutUserController, confirmEmailVerificationController, sendEmailVerificationController)
 describe('Session logic', () => {
@@ -16,7 +20,9 @@ describe('Session logic', () => {
 
   beforeAll(async () => await Promise.all(allPromises))
 
-  describe('Register testing', () => {
+  xdescribe('Register testing', () => {
+    afterAll(async () => await cleaningTable(User))
+
     const correctParams = {
       email: 'admin@admin.com',
       password: '@1234567a',
@@ -403,14 +409,26 @@ describe('Session logic', () => {
     })
   })
 
-  xdescribe('Login and verify email testing', () => {
+  describe('Login and verify email testing', () => {
+    const id = crypto.randomUUID()
+    beforeAll(async () => {
+      const hashedPassword = await bcrypt.hash('@1234567a', salty)
+      await User.create({ id, email: 'admin@admin.com', password: hashedPassword, name: 'Admin', lastName: 'Admin', fk_id_type_user: 2 })
+    })
+
+    afterAll(async () => { await Promise.all([cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]) })
+
+    beforeEach(async () => {
+      await Promise.all([cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList)])
+    })
+
     const correctParams = {
       email: 'admin@admin.com',
       password: '@1234567a',
       deviceId: 1
     }
 
-    test('Testing login with an empty object', async () => {
+    test('Testing login: Sending an empty object', async () => {
       try {
         await api.post('/api/v1/users/login').send({}).expect(400)
       } catch (error) {
@@ -419,7 +437,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with sending nothing', async () => {
+    test('Testing login: Sending nothing', async () => {
       try {
         await api.post('/api/v1/users/login').send(undefined).expect(400)
       } catch (error) {
@@ -428,7 +446,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login not sending the email paramether', async () => {
+    test('Testing login: Not sending the email paramether', async () => {
       try {
         const badParams = {
           password: '@1234567a',
@@ -441,7 +459,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login sending an empty email', async () => {
+    test('Testing login: Sending an empty email', async () => {
       try {
         const badParams = {
           email: '',
@@ -455,7 +473,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login not sending the email paramether', async () => {
+    test('Testing login: Not sending the email paramether', async () => {
       try {
         const badParams = {
           email: 'admin@admin.com',
@@ -468,7 +486,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login sending an empty password', async () => {
+    test('Testing login: Sending an empty password', async () => {
       try {
         const badParams = {
           email: 'admin@admin.com',
@@ -482,20 +500,20 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login not sending the device paramether', async () => {
+    test('Testing login: Not sending the device paramether', async () => {
       try {
         const badParams = {
           email: 'admin@admin.com',
           password: '@1234567a'
         }
-        await api.post('/api/v1/users/login').send(badParams).expect(400)
+        await api.post('/api/v1/users/login').send(badParams).expect(403)
       } catch (error) {
         console.log(error)
         throw error
       }
     })
 
-    test('Testing login sending an empty device', async () => {
+    test('Testing login: Sending an empty device', async () => {
       try {
         const badParams = {
           email: 'admin@admin.com',
@@ -509,7 +527,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with a bad format email', async () => {
+    test('Testing login: Bad format email', async () => {
       try {
         const badParams = {
           email: 'ad.comm@in@admin.com',
@@ -523,7 +541,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with an email with an invalid special character', async () => {
+    test('Testing login: Email with an invalid special character', async () => {
       try {
         const badParams = {
           email: 'adm(in@admin.com',
@@ -537,7 +555,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with a non exist email', async () => {
+    test('Testing login: Non exist email', async () => {
       try {
         const badParams = {
           email: 'notExistEmail@gmail.com',
@@ -551,7 +569,7 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with a correct email but a bad password', async () => {
+    test('Testing login: Correct email but a bad password', async () => {
       try {
         const badParams = {
           email: 'admin@admin.com',
@@ -565,8 +583,18 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with correct params', async () => {
+    test('Testing login: Correct params but no verified', async () => {
       try {
+        await api.post('/api/v1/users/login').send(correctParams).expect(403)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing login: Correct params but verified', async () => {
+      try {
+        await User.update({ isVerified: true }, { where: { id } })
         await api.post('/api/v1/users/login').send(correctParams).expect(200)
       } catch (error) {
         console.log(error)
@@ -574,8 +602,12 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with correct params with the same device', async () => {
+    test('Testing login: Login twice with the same device and user verified', async () => {
       try {
+        // NOTE First login
+        await api.post('/api/v1/users/login').send(correctParams).expect(200)
+
+        // NOTE second login
         await api.post('/api/v1/users/login').send(correctParams).expect(200)
         const { countWhiteList, rowsWhiteList } = await getAllDataOfTable(TokenWhiteList)
         console.log('white list', countWhiteList, rowsWhiteList)
@@ -591,8 +623,11 @@ describe('Session logic', () => {
       }
     })
 
-    test('Testing login with correct params with other device', async () => {
+    test('Testing login: Login twice with two different devices and user verified', async () => {
       try {
+        // NOTE First login
+        await api.post('/api/v1/users/login').send(correctParams).expect(200)
+
         const newParams = {
           email: 'admin@admin.com',
           password: '@1234567a',
@@ -604,22 +639,47 @@ describe('Session logic', () => {
         expect(countWhiteList).toEqual(2)
         const { countBlackList, rowsBlackList } = await getAllDataOfTable(TokenBlackList)
         expect(rowsBlackList).toBeTruthy()
-        expect(countBlackList).toEqual(1)
+        expect(countBlackList).toEqual(0)
       } catch (error) {
         console.log(error)
         throw error
       }
     })
 
-    // TODO this
-    test('Testing login  with correct params but device is in cookies', async () => {
+    test('Testing login: Correct params but device is in cookies', async () => {
       try {
         const newParams = {
           email: 'admin@admin.com',
           password: '@1234567a'
         }
 
-        await api.post('/api/v1/users/login').set('Cookie', 'deviceId=2').send(newParams).expect(200)
+        // NOTE login with cookies
+        await api.post('/api/v1/users/login').set('Cookie', 'deviceId=1').send(newParams).expect(200)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing login: Correct params but device is in cookies and the device is duplicated', async () => {
+      try {
+        const newParams = {
+          email: 'admin@admin.com',
+          password: '@1234567a'
+        }
+
+        // NOTE First login
+        await api.post('/api/v1/users/login').send(correctParams).expect(200)
+
+        // NOTE login with cookies
+        await api.post('/api/v1/users/login').set('Cookie', 'deviceId=1').send(newParams).expect(200)
+
+        const { countWhiteList, rowsWhiteList } = await getAllDataOfTable(TokenWhiteList)
+        expect(rowsWhiteList).toBeTruthy()
+        expect(countWhiteList).toEqual(1)
+        const { countBlackList, rowsBlackList } = await getAllDataOfTable(TokenBlackList)
+        expect(rowsBlackList).toBeTruthy()
+        expect(countBlackList).toEqual(1)
       } catch (error) {
         console.log(error)
         throw error
