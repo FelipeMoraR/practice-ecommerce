@@ -53,7 +53,6 @@ export const loginUserController = async (req, res) => {
   try {
     const { email, password } = req.body
     const deviceIdReceived = req.cookies.id_device || req.body.deviceId || null
-    const isFirstTimeDevice = !req.cookies.id_device
 
     if (!deviceIdReceived) throw new HttpError('Id device not seted', 403)
 
@@ -103,17 +102,15 @@ export const loginUserController = async (req, res) => {
           expiresIn: '7d'
         })
 
-      if (!isFirstTimeDevice) {
-        await saveLogController('AUDIT', 'User try to login again with the same device', email, ip)
-        const oldTokenInWhiteList = await TokenWhiteList.findOne({ where: { id_device: deviceIdReceived } })
+      await saveLogController('AUDIT', 'Validating if the user has already a session with one device', email, ip)
+      const oldTokenInWhiteList = await TokenWhiteList.findOne({ where: { id_device: deviceIdReceived } })
 
-        if (oldTokenInWhiteList) {
-          const oldToken = jwt.decode(oldTokenInWhiteList.token)
-          const expOldToken = new Date(oldToken.exp * 1000)
-          await TokenWhiteList.destroy({ where: { id_device: deviceIdReceived } })
-          const idNewBlackListToken = crypto.randomUUID()
-          await TokenBlackList.create({ id: idNewBlackListToken, token: oldTokenInWhiteList.token, expDate: expOldToken, fk_id_user: oldTokenInWhiteList.fk_id_user, fk_id_type_token: 2 })
-        }
+      if (oldTokenInWhiteList) {
+        const oldToken = jwt.decode(oldTokenInWhiteList.token)
+        const expOldToken = new Date(oldToken.exp * 1000)
+        await TokenWhiteList.destroy({ where: { id_device: deviceIdReceived } })
+        const idNewBlackListToken = crypto.randomUUID()
+        await TokenBlackList.create({ id: idNewBlackListToken, token: oldTokenInWhiteList.token, expDate: expOldToken, fk_id_user: oldTokenInWhiteList.fk_id_user, fk_id_type_token: 2 })
       }
 
       // NOTE Saving token in white list
@@ -571,7 +568,6 @@ export const updateBasicUserInfoController = async (req, res) => {
   }
 }
 
-// TODO Verify phone
 export const updateUserPhoneController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 

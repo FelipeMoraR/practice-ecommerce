@@ -47,7 +47,7 @@ app.use((err, req, res, next) => {
 tokenBlackListCleaner()
 tokenWhiteListCleaner()
 
-app.get('/', (req, res) => {
+app.get('/', (_, res) => {
   const currentTimeUTC = new Date().toISOString()
   res.json({ currentTimeUTC })
 })
