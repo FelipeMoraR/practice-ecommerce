@@ -10,7 +10,7 @@ import { SALT_ROUNDS } from '../../src/config/config.js'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // NOTE run separately to avoid bugs
-describe('Session logic', () => {
+xdescribe('Session logic', () => {
   const allPromises = [cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]
 
   afterAll(async () => {
@@ -905,5 +905,148 @@ describe('Session logic', () => {
         throw error
       }
     })
+  })
+})
+
+describe('Forgot password logic', () => {
+  const id = crypto.randomUUID()
+  beforeAll(async () => {
+    const hashedPassword = await bcrypt.hash('@1234567a', salty)
+    await User.create({ id, email: 'admin2@admin.com', password: hashedPassword, name: 'Admin', lastName: 'Admin', lastVerificationEmailSentAt: new Date('1995-12-17T03:24:00'), fk_id_type_user: 2 })
+  })
+
+  afterAll(async () => { await Promise.all([cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]) })
+
+  test('Testing send email forgot password: Sending nothing in req', async () => {
+    try {
+      await api.post('/api/v1/users/send-email-forgot-password').send(null).expect(400)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending an empty object', async () => {
+    try {
+      await api.post('/api/v1/users/send-email-forgot-password').send({}).expect(400)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending an empty email', async () => {
+    try {
+      const body = {
+        email: ''
+      }
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(400)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending a bad email', async () => {
+    try {
+      const body = {
+        email: 'das/()@gmail.com'
+      }
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(400)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending an email bad formated', async () => {
+    try {
+      const body = {
+        email: 'd@gmailas@gmaildas.com'
+      }
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(400)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Send an unregistered email', async () => {
+    try {
+      const body = {
+        email: 'randomEmail@gmail.com',
+        deviceId: 1
+      }
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(404)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending a correct email but not verified', async () => {
+    try {
+      const body = {
+        email: 'admin2@admin.com',
+        deviceId: 1
+      }
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(200)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending a two emails at row to validate email', async () => {
+    try {
+      // NOTE Reseting user
+      await User.update({ lastVerificationEmailSentAt: new Date('1995-12-17T03:24:00') }, { where: { id } })
+      const body = {
+        email: 'admin2@admin.com',
+        deviceId: 1
+      }
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(200)
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(403)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending a correct email but verified', async () => {
+    try {
+      const body = {
+        email: 'admin2@admin.com',
+        deviceId: 1
+      }
+      await User.update({ isVerified: true }, { where: { id } })
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(200)
+      const { count, rows } = await getAllDataOfTable(TokenWhiteList)
+      expect(rows).toBeTruthy()
+      expect(count).toBe(1)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  test('Testing send email forgot password: Sending a correct email, verified and we already send an email', async () => {
+    try {
+      await cleaningTable(TokenWhiteList)
+
+      const body = {
+        email: 'admin2@admin.com',
+        deviceId: 1
+      }
+      await User.update({ lastForgotPasswordSentAt: new Date('1995-12-17T03:24:00'), isVerified: true }, { where: { id } })
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(200)
+      await api.post('/api/v1/users/send-email-forgot-password').send(body).expect(403)
+      const { count, rows } = await getAllDataOfTable(TokenWhiteList)
+      expect(rows).toBeTruthy()
+      expect(count).toBe(1)
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
   })
 })

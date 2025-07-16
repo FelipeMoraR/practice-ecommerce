@@ -47,7 +47,7 @@ const handlerGetPostalCode = async (street, number, comune) => {
   }
 }
 
-// NOTE login
+// NOTE login, Tested
 export const loginUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null // NOTE CF-Connecting-IP because i will upload in cloudefare
   try {
@@ -157,6 +157,7 @@ export const loginUserController = async (req, res) => {
   }
 }
 
+// NOTE Tested
 export const registerUserController = async (req, res) => {
   const startTime = performance.now()
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
@@ -199,7 +200,7 @@ export const registerUserController = async (req, res) => {
   }
 }
 
-// ANCHOR This return a 401 be carefull
+// ANCHOR This return a 401 be carefull, Tested
 export const logoutUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -239,7 +240,7 @@ export const logoutUserController = async (req, res) => {
   }
 }
 
-// NOTE Email Verification
+// NOTE Email Verification, Tested end-2-end
 export const confirmEmailVerificationController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -284,6 +285,7 @@ export const confirmEmailVerificationController = async (req, res) => {
   }
 }
 
+// NOTE Tested
 export const sendEmailVerificationController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -326,7 +328,7 @@ export const sendEmailVerificationController = async (req, res) => {
   }
 }
 
-// NOTE Forgot password
+// NOTE Forgot password, Tested
 export const sendForgotPasswordEmailController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -349,7 +351,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Email verify spam controll
       // NOTE Remember user has to be verified to use the forgot password controller
-      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
+      if (user.lastVerificationEmailSentAt && (now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
         await saveLogController('WARNING', 'User trying to send another verification email but is in cooldown', user.email, ip)
         throw new HttpError('The email to verify user was already sended, wait a moment...', 403)
       }
@@ -422,7 +424,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
   }
 }
 
-// ANCHOR This return a 401 be carefull
+// ANCHOR This return a 401 be carefull, testing end-2-end
 export const changePasswordController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
