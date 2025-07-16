@@ -1457,4 +1457,281 @@ describe('User administration', () => {
       }
     })
   })
+
+  xdescribe('Updating password user', () => {
+    test('Testing changing user password: No sending cookies', async () => {
+      try {
+        await api.patch('/api/v1/users/update-password-user').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: No sending a body', async () => {
+      try {
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending an empty body', async () => {
+      try {
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send({}).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending an empty params', async () => {
+      try {
+        const body = {
+          oldPassword: '',
+          newPassword: '',
+          confirmNewPassword: ''
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending an only letters oldPassword', async () => {
+      try {
+        const body = {
+          oldPassword: 'asdfghjkl',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending an only numbers oldPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '123456789',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending an only simbols oldPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@"#$%&/()',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a short oldPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '1@3a',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a long oldPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '1@3a1@3a1@3a1@3a1@3a1@3a1@3a1@3a1@3a',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a empty oldPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a bad oldPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@123e1238',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    // -----------------------------------------------------------------------------------------
+
+    test('Testing changing user password: Sending an only letters newPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@a1234567',
+          newPassword: 'asdfghjkl',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending an only numbers newPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@a1234567',
+          newPassword: '123456789',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending an only simbols newPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@a1234567',
+          newPassword: '@"#$%&/()',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a short newPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@a1234567',
+          newPassword: '1@3a',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a long newPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@a1234567',
+          newPassword: '1@3a1@3a1@3a1@3a1@3a1@3a1@3a1@3a1@3a',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a empty newPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@a1234567',
+          newPassword: '',
+          confirmNewPassword: '@a1234567'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Sending a non equal confirmNewPassword and newPassword', async () => {
+      try {
+        const body = {
+          oldPassword: '@1234567a',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@1234567a'
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing changing user password: Validating the change', async () => {
+      try {
+        const body = {
+          oldPassword: '@1234567a',
+          newPassword: '@a1234567',
+          confirmNewPassword: '@a1234567'
+        }
+        const oldPasswordLogin = {
+          email: 'admin2@admin.com',
+          password: '@1234567a',
+          deviceId: 1
+        }
+
+        const newPasswordLogin = {
+          email: 'admin2@admin.com',
+          password: '@a1234567',
+          deviceId: 1
+        }
+        await api.patch('/api/v1/users/update-password-user').set('Cookie', cookies).send(body).expect(200)
+
+        // Verifing the invalidation of all token session
+        const { count: countWhiteList, rows: rowsWhiteList } = await getAllDataOfTable(TokenWhiteList)
+        expect(rowsWhiteList).toBeTruthy()
+        expect(countWhiteList).toBe(0)
+        const { count: countBlackList, rows: rowsBlackList } = await getAllDataOfTable(TokenBlackList)
+        expect(rowsBlackList).toBeTruthy()
+        expect(countBlackList).toBe(1)
+
+        await api.post('/api/v1/users/login').send(oldPasswordLogin).expect(401)
+        await api.post('/api/v1/users/login').send(newPasswordLogin).expect(200)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+  })
 })

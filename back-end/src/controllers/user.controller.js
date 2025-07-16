@@ -601,6 +601,7 @@ export const updateUserPhoneController = async (req, res) => {
 }
 
 // TODO When the user change the password all sesion has to be ended, so i have to think in a way to controll the access token...
+// Tested
 export const updateUserPasswordController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -625,7 +626,7 @@ export const updateUserPasswordController = async (req, res) => {
 
       await User.update({ password: newPassordToSave, updatedAt: now }, { where: { id } })
       await saveLogController('INFO', 'User change password successfully', user.email, ip)
-      // TODO After the password changed all the sesion has to be closed
+
       const allTokenWhiteList = await TokenWhiteList.findAll({ where: { fk_id_user: id } })
 
       // NOTE If no session is up
