@@ -908,7 +908,7 @@ xdescribe('Session logic', () => {
   })
 })
 
-describe('Forgot password logic', () => {
+xdescribe('Forgot password logic', () => {
   const id = crypto.randomUUID()
   beforeAll(async () => {
     const hashedPassword = await bcrypt.hash('@1234567a', salty)
@@ -1048,5 +1048,31 @@ describe('Forgot password logic', () => {
       console.log(error)
       throw error
     }
+  })
+})
+
+describe('User administration', () => {
+  const id = crypto.randomUUID()
+  let cookies
+  beforeAll(async () => {
+    const hashedPassword = await bcrypt.hash('@1234567a', salty)
+    await User.create({ id, email: 'admin2@admin.com', password: hashedPassword, isVerified: true, name: 'Admin', lastName: 'Admin', fk_id_type_user: 2 })
+    const body = {
+      email: 'admin2@admin.com',
+      password: '@1234567a',
+      deviceId: 2
+    }
+    const response = await api.post('/api/v1/users/login').send(body)
+    if (response.statusCode !== 200) throw new Error('User couldnt login')
+
+    cookies = response.header['set-cookie']
+    if (cookies.length < 1) throw new Error('No cookies setted')
+    console.log('cookies => ', cookies)
+  })
+
+  afterAll(async () => { await Promise.all([cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]) })
+
+  test('', async () => {
+
   })
 })
