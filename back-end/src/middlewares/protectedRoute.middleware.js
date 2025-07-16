@@ -13,7 +13,7 @@ export const privateRoute = (req, res, next) => {
     next()
   } catch (error) {
     console.log('protectedRoute::: ', error)
-    if (error.name === 'TokenExpiredError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
+    if (error.name === 'TokenExpiredError' || error.name === 'JsonWebTokenError') return res.status(498).send({ status: 498, message: 'Token invalid/expired' })
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
     return res.status(500).send({ status: 500, message: 'Internal server error' })
   }

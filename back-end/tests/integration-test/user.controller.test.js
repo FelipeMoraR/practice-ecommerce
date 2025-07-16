@@ -1067,12 +1067,394 @@ describe('User administration', () => {
 
     cookies = response.header['set-cookie']
     if (cookies.length < 1) throw new Error('No cookies setted')
-    console.log('cookies => ', cookies)
   })
 
   afterAll(async () => { await Promise.all([cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]) })
 
-  test('', async () => {
+  xdescribe('View user info testing', () => {
+    test('Testing view user: Not sending cookies', async () => {
+      try {
+        await api.get('/api/v1/users/get-user').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
 
+    test('Testing view user: Sending olds cookies', async () => {
+      try {
+        const oldCookies = [
+          'id_device=2; Max-Age=31536000; Path=/; Expires=Thu, 16 Jul 2026 20:08:22 GMT; HttpOnly; SameSite=Strict',
+          'access_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImMyMDhlM2IyLTUyZDAtNGNjMy04NWNjLTU1ZDc5NTFkOWZmOSIsInVzZXJGdWxsTmFtZSI6IkFkbWluIEFkbWluIiwiaWF0IjoxNzUyNjk2NTAyLCJleHAiOjE3NTI2OTcxMDJ9.z3F87LwXpj-N-UPMQjl8gXRj37bFSe6F4nvuu3OQWo8; Max-Age=600; Path=/; Expires=Wed, 16 Jul 2025 20:18:22 GMT; HttpOnly; SameSite=Strict',
+          'refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImMyMDhlM2IyLTUyZDAtNGNjMy04NWNjLTU1ZDc5NTFkOWZmOSIsImp0aSI6IjJiZWM3MDBkLTZjNjEtNGNmNi05NzgxLTdlN2U3NTY3NDgxZiIsImlhdCI6MTc1MjY5NjUwMiwiZXhwIjoxNzUzMzAxMzAyfQ.7ZbRpVsCinjBvso8IymkxOffHdJR9URDRMqLw9LqLxk; Max-Age=604800; Path=/; Expires=Wed, 23 Jul 2025 20:08:22 GMT; HttpOnly; SameSite=Strict'
+        ]
+        await api.get('/api/v1/users/get-user').set('Cookie', oldCookies).expect(498)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing view user: Sending an invalid access_token', async () => {
+      try {
+        const oldCookies = [
+          'id_device=2; Max-Age=31536000; Path=/; Expires=Thu, 16 Jul 2026 20:08:22 GMT; HttpOnly; SameSite=Strict',
+          'access_token=eyJsomethingbad.lol-asd; Max-Age=600; Path=/; Expires=Wed, 16 Jul 2025 20:18:22 GMT; HttpOnly; SameSite=Strict',
+          'refresh_token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImMyMDhlM2IyLTUyZDAtNGNjMy04NWNjLTU1ZDc5NTFkOWZmOSIsImp0aSI6IjJiZWM3MDBkLTZjNjEtNGNmNi05NzgxLTdlN2U3NTY3NDgxZiIsImlhdCI6MTc1MjY5NjUwMiwiZXhwIjoxNzUzMzAxMzAyfQ.7ZbRpVsCinjBvso8IymkxOffHdJR9URDRMqLw9LqLxk; Max-Age=604800; Path=/; Expires=Wed, 23 Jul 2025 20:08:22 GMT; HttpOnly; SameSite=Strict'
+        ]
+        await api.get('/api/v1/users/get-user').set('Cookie', oldCookies).expect(498)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing view user: Sending correct cookies', async () => {
+      try {
+        await api.get('/api/v1/users/get-user').set('Cookie', cookies).expect(200)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+  })
+
+  xdescribe('Updating basic info user testing', () => {
+    test('Testing update basic info user: Not sending cookies', async () => {
+      try {
+        await api.patch('/api/v1/users/update-basic-user-info').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Not sending a body', async () => {
+      try {
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Sending an empty object', async () => {
+      try {
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send({}).expect(304)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name but sending an empty name', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          name: ''
+        }
+
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name but sending numbers', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          name: 12345
+        }
+
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name but sending a string of numbers', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          name: '12345'
+        }
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name but sending a string of simbols', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          name: '@"#!'
+        }
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          name: 'newName'
+        }
+
+        const response = await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body)
+        const user = await User.findByPk(id)
+
+        expect(response.statusCode).toBe(200)
+        expect(user).toBeTruthy()
+        expect(user.name).toBe('newName')
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name but it hasnt been 30 days', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const correctUpload = {
+          name: 'newName'
+        }
+        const badUpload = {
+          name: 'badName'
+        }
+
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(correctUpload).expect(200)
+        const response = await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(badUpload)
+        const user = await User.findByPk(id)
+
+        expect(response.statusCode).toBe(403)
+        expect(user).toBeTruthy()
+        expect(user.name).toBe('newName')
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    // ------------------------------------------------------------------------------------------------------------
+
+    test('Testing update basic info user: Updating only the lastname but sending an empty lastname', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          lastName: ''
+        }
+
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the lastname but sending numbers', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          lastName: 12345
+        }
+
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the lastname but sending a string of numbers', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          lastName: '12345'
+        }
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the lastname but sending a string of simbols', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          lastName: '@"#!'
+        }
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const body = {
+          lastName: 'newLastName'
+        }
+
+        const response = await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(body)
+        const user = await User.findByPk(id)
+
+        expect(response.statusCode).toBe(200)
+        expect(user).toBeTruthy()
+        expect(user.lastName).toBe('newLastName')
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update basic info user: Updating only the name but it hasnt been 30 days', async () => {
+      try {
+        // NOTE Preparing user to interact with the endpoint
+        await User.update({ lastUpdateBasicInfoUserByUser: null }, { where: { id } })
+        const correctUpload = {
+          lastName: 'newLastName'
+        }
+        const badUpload = {
+          lastName: 'badLastName'
+        }
+
+        await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(correctUpload).expect(200)
+        const response = await api.patch('/api/v1/users/update-basic-user-info').set('Cookie', cookies).send(badUpload)
+        const user = await User.findByPk(id)
+
+        expect(response.statusCode).toBe(403)
+        expect(user).toBeTruthy()
+        expect(user.lastName).toBe('newLastName')
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    // ------------------------------------------------------------------------------------------------------------
+
+    test('Testing update phone user: Not sending cookies', async () => {
+      try {
+        await api.put('/api/v1/users/update-user-phone').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Not sending a body', async () => {
+      try {
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Sending an empty object', async () => {
+      try {
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).send({}).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Sending an empty phone', async () => {
+      try {
+        const body = {
+          phone: ''
+        }
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Sending letters', async () => {
+      try {
+        const body = {
+          phone: 'asdfsadf'
+        }
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Sending simbols', async () => {
+      try {
+        const body = {
+          phone: '@"#$%&/('
+        }
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Sending a short phone', async () => {
+      try {
+        const body = {
+          phone: '1234'
+        }
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Sending a long phone', async () => {
+      try {
+        const body = {
+          phone: '1234123412341234'
+        }
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing update phone user: Sending a correct phone', async () => {
+      try {
+        const body = {
+          phone: '35374821'
+        }
+        await api.put('/api/v1/users/update-user-phone').set('Cookie', cookies).send(body).expect(200)
+        const user = await User.findByPk(id)
+        expect(user).toBeTruthy()
+        expect(user.phone).toBe('35374821')
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
   })
 })

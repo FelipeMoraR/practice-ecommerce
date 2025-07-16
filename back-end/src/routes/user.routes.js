@@ -19,7 +19,8 @@ import {
   deleteAddressClientController,
   createNewAddressClientController,
   updateBasicUserInfoController,
-  updateUserPasswordController
+  updateUserPasswordController,
+  updateUserPhoneController
 } from '../controllers/user.controller.js'
 import { validateSquema } from '../middlewares/validationSquema.middleware.js'
 import { privateRoute, adminRoute } from '../middlewares/protectedRoute.middleware.js'
@@ -40,7 +41,8 @@ import {
   addAddressUserByAdminSchema,
   updateBasicUserInfoSchema,
   updatePasswordSchema,
-  validateEmailSchema
+  validateEmailSchema,
+  updatePhoneUserSchema
 } from '../squemas/user.squema.js'
 
 const UserRouter = express.Router()
@@ -65,6 +67,11 @@ UserRouter.post('/update-password', validateSquema(forgotPasswordSchema, 'body')
 UserRouter.post('/add-user-address', privateRoute, validateSquema(addAddressUserSchema, 'body'), addUserAddressController)
 UserRouter.post('/create-new-client', privateRoute, adminRoute, validateSquema(registerSchema, 'body'), createClientController)
 UserRouter.post('/create-new-address-client', privateRoute, adminRoute, validateSquema(addAddressUserByAdminSchema, 'body'), createNewAddressClientController)
+
+// SECTION PUT
+// ANCHOR Public PUT
+// ANCHOR Private PUT
+UserRouter.put('/update-user-phone', privateRoute, validateSquema(updatePhoneUserSchema, 'body'), updateUserPhoneController)
 
 // SECTION PATCH
 // ANCHOR Public PATCH
