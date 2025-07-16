@@ -491,7 +491,7 @@ export const changePasswordController = async (req, res) => {
   }
 }
 
-// NOTE User data
+// NOTE User data, Tested
 export const viewUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -524,7 +524,8 @@ export const viewUserController = async (req, res) => {
   }
 }
 
-// NOTE: This was created to prevent scams, such as making a purchase and then canceling it multiple times and then changing my name.
+// NOTE This was created to prevent scams, such as making a purchase and then canceling it multiple times and then changing the name.
+// NOTE Tested
 export const updateBasicUserInfoController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -570,6 +571,7 @@ export const updateBasicUserInfoController = async (req, res) => {
   }
 }
 
+// NOTE Tested
 export const updateUserPhoneController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
