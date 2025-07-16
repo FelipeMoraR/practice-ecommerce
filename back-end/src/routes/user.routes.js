@@ -39,7 +39,8 @@ import {
   deleteClientAddressSchema,
   addAddressUserByAdminSchema,
   updateBasicUserInfoSchema,
-  updatePasswordSchema
+  updatePasswordSchema,
+  validateEmailSchema
 } from '../squemas/user.squema.js'
 
 const UserRouter = express.Router()
@@ -56,7 +57,7 @@ UserRouter.post('/login', validateSquema(loginSchema, 'body'), loginUserControll
 UserRouter.post('/register', validateSquema(registerSchema, 'body'), registerUserController)
 UserRouter.post('/logout', logoutUserController)
 UserRouter.post('/confirm-email/:token', validateSquema(tokenSchema, 'params'), confirmEmailVerificationController)
-UserRouter.post('/resend-email-verification/:userId', validateSquema(userIdSchema, 'params'), sendEmailVerificationController)
+UserRouter.post('/resend-email-verification', validateSquema(validateEmailSchema, 'body'), sendEmailVerificationController)
 UserRouter.post('/send-email-forgot-password', validateSquema(sendForgotPasswordEmailSchema, 'body'), sendForgotPasswordEmailController)
 UserRouter.post('/update-password', validateSquema(forgotPasswordSchema, 'body'), changePasswordController)
 

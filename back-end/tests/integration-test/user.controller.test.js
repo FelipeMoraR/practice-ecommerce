@@ -9,8 +9,7 @@ import { SALT_ROUNDS } from '../../src/config/config.js'
 
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
-// NOTE Session logic (confirmEmailVerificationController, sendEmailVerificationController)
-// NOTE execute separate to not made bugs
+// NOTE run separately to avoid bugs
 describe('Session logic', () => {
   const allPromises = [cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]
 
@@ -21,7 +20,7 @@ describe('Session logic', () => {
 
   beforeAll(async () => await Promise.all(allPromises))
 
-  xdescribe('Integration Register testing', () => {
+  xdescribe('Integration testing: Register', () => {
     afterAll(async () => await cleaningTable(User))
 
     const correctParams = {
@@ -422,7 +421,7 @@ describe('Session logic', () => {
     })
   })
 
-  xdescribe('Integration Login testing', () => {
+  xdescribe('Integration testing: Login', () => {
     const id = crypto.randomUUID()
     beforeAll(async () => {
       const hashedPassword = await bcrypt.hash('@1234567a', salty)
@@ -742,7 +741,7 @@ describe('Session logic', () => {
     })
   })
 
-  xdescribe('Integration Logout Testing', () => {
+  xdescribe('Integration testing: Logout', () => {
     const id = crypto.randomUUID()
     let refreshTokenFromSession
     beforeAll(async () => {
@@ -800,6 +799,107 @@ describe('Session logic', () => {
         expect(count).toBe(1)
         expect(response.statusCode).toBe(200)
         expect(response.body.message).toBe('Logout successful')
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+  })
+
+  xdescribe('Integration testing: Re-send email verification', () => {
+    const id = crypto.randomUUID()
+    beforeAll(async () => {
+      const hashedPassword = await bcrypt.hash('@1234567a', salty)
+      await User.create({ id, email: 'admin2@admin.com', password: hashedPassword, name: 'Admin', lastName: 'Admin', lastVerificationEmailSentAt: new Date('1995-12-17T03:24:00'), fk_id_type_user: 2 })
+    })
+
+    afterAll(async () => { await Promise.all([cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]) })
+
+    test('Testing re-send email verification: Sending nothing', async () => {
+      try {
+        await api.post('/api/v1/users/resend-email-verification').send(null).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing re-send email verification: Sending only an object', async () => {
+      try {
+        await api.post('/api/v1/users/resend-email-verification').send({}).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing re-send email verification: Sending an empty email', async () => {
+      try {
+        const body = {
+          email: ''
+        }
+        await api.post('/api/v1/users/resend-email-verification').send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing re-send email verification: Sending an invalid email', async () => {
+      try {
+        const body = {
+          email: 'das/()@gmail.com'
+        }
+        await api.post('/api/v1/users/resend-email-verification').send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing re-send email verification: Sending an bad format email', async () => {
+      try {
+        const body = {
+          email: 'd@gmailas@gmaildas.com'
+        }
+        await api.post('/api/v1/users/resend-email-verification').send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing re-send email verification: Sending a non exist email', async () => {
+      try {
+        const body = {
+          email: 'randomEmail@gmail.com'
+        }
+        await api.post('/api/v1/users/resend-email-verification').send(body).expect(404)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing re-send email verification: Sending a email with a good email', async () => {
+      try {
+        const body = {
+          email: 'admin2@admin.com'
+        }
+        await api.post('/api/v1/users/resend-email-verification').send(body).expect(200)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing re-send email verification: Sending a email with a user that already was verified', async () => {
+      try {
+        const body = {
+          email: 'admin2@admin.com'
+        }
+        await User.update({ isVerified: true }, { where: { id } })
+        await api.post('/api/v1/users/resend-email-verification').send(body).expect(204)
       } catch (error) {
         console.log(error)
         throw error

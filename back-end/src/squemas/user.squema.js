@@ -380,3 +380,7 @@ export const deleteClientAddressSchema = z.object({
   idUser: z.string().min(1, 'idUser is required').length(36, 'idUser must have 36 char'),
   idAddress: z.string().min(1, 'idAddress is required').length(36, 'idAddress must have 36 char')
 })
+
+export const validateEmailSchema = z.object({
+  email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250')
+})
