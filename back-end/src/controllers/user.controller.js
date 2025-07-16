@@ -293,8 +293,8 @@ export const sendEmailVerificationController = async (req, res) => {
       const now = await handlerExtractUtcTimestamp()
 
       // NOTE User validation
-      const userId = req.params.userId
-      const user = await User.findOne({ where: { id: userId } })
+      const { email } = req.body
+      const user = await User.findOne({ where: { email } })
       if (!user) throw new HttpError('User not found', 404)
       if (user.isVerified) {
         await saveLogController('AUDIT', 'User is verified but tried to send another email', user.email, ip)
@@ -311,7 +311,7 @@ export const sendEmailVerificationController = async (req, res) => {
       const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
-      await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: userId } })
+      await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { email } })
       await saveLogController('INFO', 'User send a new email verification', user.email, ip)
 
       return 200
