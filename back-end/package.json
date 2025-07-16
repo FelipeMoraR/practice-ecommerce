@@ -8,7 +8,7 @@
     "commandsEcommers": "npx sequelize-cli db:migrate --to 20250516182719-create-tokenwhitelist.js --config config/config.cjs && npx sequelize-cli db:seed:all --config config/config.cjs",
     "commandsLoger": "npx sequelize-cli db:migrate --name 20250703185946-create-logger.js --config config/configLogger.cjs",
     "dev": "node --watch app.js",
-    "test": "set NODE_OPTIONS=--experimental-vm-modules && npx jest tests --detectOpenHandles",
+    "test": "set NODE_OPTIONS=--experimental-vm-modules && npx jest tests --detectOpenHandles --verbose",
     "db-build": "npm run commandsEcommers && npm run commandsLoger",
     "commandsCleanECommers": "npx sequelize-cli db:migrate:undo:all --config config/config.cjs",
     "commandsCleanLogger": "npx sequelize-cli db:migrate:undo:all --config config/configLogger.cjs",

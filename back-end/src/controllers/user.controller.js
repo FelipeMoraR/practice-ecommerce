@@ -71,7 +71,7 @@ export const loginUserController = async (req, res) => {
       }
 
       // NOTE Spam controll to user verification
-      if ((now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
+      if (user.lastForgotPasswordSentAt && (now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
         await saveLogController('WARNING', 'Attemp to login but user wasnt verified. Email was already sended', email, ip)
         return { accessToken: null, refreshToken: null, deviceId: null, isVerified: user.isVerified, emailSendInCooldown: true }
       }
