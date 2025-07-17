@@ -821,7 +821,7 @@ export const deleteUserAddressController = async (req, res) => {
   }
 }
 
-// NOTE Admin basic crud
+// NOTE Admin basic crud, tested
 export const getAllClientsController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
   const { email: adminEmail } = req.adminSession
