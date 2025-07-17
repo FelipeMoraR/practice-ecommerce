@@ -2095,7 +2095,7 @@ describe('User administration', () => {
     // -------------------------------------------------------------
   })
 
-  xdescribe('Update an user address testing', () => {
+  xdescribe('Update an address testing', () => {
     beforeAll(async () => {
       await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
       const adressToTest = await Address.create({ id: 'bd37012a-bd79-416e-aac7-5e850686ed3d', street: 'Toconao', number: 4947, numDpto: null, postalCode: 8650098, fk_id_commune: 27 })
@@ -2464,6 +2464,64 @@ describe('User administration', () => {
           postalCode: '8650089'
         }
         await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(409)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+  })
+
+  describe('Deleting an address testing', () => {
+    beforeAll(async () => {
+      await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
+      const adressToTest = await Address.create({ id: 'bd37012a-bd79-416e-aac7-5e850686ed3d', street: 'Toconao', number: 4947, numDpto: null, postalCode: 8650098, fk_id_commune: 27 })
+      await UserAddress.create({ id: 'bas7012a-bd79-416e-aac7-5e850686ed32', name: 'str1', fk_id_user: id, fk_id_address: 'bd37012a-bd79-416e-aac7-5e850686ed3d' })
+      if (!adressToTest) throw new Error('No address to update')
+    })
+
+    afterAll(async () => {
+      await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
+    })
+
+    test('Testing deleting an address: No sending id', async () => {
+      try {
+        await api.delete('/api/v1/users/delete-user-address/').set('Cookie', cookies).expect(404)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing deleting an address: No sending cookies', async () => {
+      try {
+        await api.delete('/api/v1/users/delete-user-address/12321').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing deleting an address: Attempt a short id', async () => {
+      try {
+        await api.delete('/api/v1/users/delete-user-address/1231').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing deleting an address: Sending a long id', async () => {
+      try {
+        await api.delete('/api/v1/users/delete-user-address/1231241232112312412321123124123211231241232112312412321').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing deleting an address: Sending a good id', async () => {
+      try {
+        await api.delete('/api/v1/users/delete-user-address/bd37012a-bd79-416e-aac7-5e850686ed3d').set('Cookie', cookies)
       } catch (error) {
         console.log(error)
         throw error
