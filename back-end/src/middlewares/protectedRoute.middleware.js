@@ -3,6 +3,7 @@ import { HttpError } from '../utils/customErrors.js'
 import User from '../models/user.model.js'
 import jwt from 'jsonwebtoken'
 
+// FIXME We can send the typeUser in the userSession and verify it in the adminRoute
 export const privateRoute = (req, res, next) => {
   try {
     const accessToken = req.cookies.access_token

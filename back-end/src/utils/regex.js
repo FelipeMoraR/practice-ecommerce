@@ -6,4 +6,4 @@ export const regexOnlyLetter = /^[a-zA-Z]+$/
 export const regexOnlyNumbers = /^[0-9]+$/
 export const regexOnlyLettersAndNumbers = /^[a-zA-Z0-9]+$/
 export const regexOnlyLetterAndSpaces = /^[a-zA-Záéíóú ]+$/
-export const regexOrderQuery = /^(asc|desc)\([a-zA-Z_]+\)$/
+export const regexOrderQuery = /^(asc|desc)\([a-zA-Z_]+\)(,(asc|desc)\([a-zA-Z_]+\))*$/

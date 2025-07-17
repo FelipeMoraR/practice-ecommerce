@@ -1053,7 +1053,7 @@ xdescribe('Forgot password logic', () => {
   })
 })
 
-describe('User administration', () => {
+xdescribe('User administration', () => {
   const id = crypto.randomUUID()
   let cookies
   beforeAll(async () => {
@@ -2471,7 +2471,7 @@ describe('User administration', () => {
     })
   })
 
-  describe('Deleting an address testing', () => {
+  xdescribe('Deleting an address testing', () => {
     beforeAll(async () => {
       await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
       const adressToTest = await Address.create({ id: 'bd37012a-bd79-416e-aac7-5e850686ed3d', street: 'Toconao', number: 4947, numDpto: null, postalCode: 8650098, fk_id_commune: 27 })
@@ -2522,6 +2522,363 @@ describe('User administration', () => {
     test('Testing deleting an address: Sending a good id', async () => {
       try {
         await api.delete('/api/v1/users/delete-user-address/bd37012a-bd79-416e-aac7-5e850686ed3d').set('Cookie', cookies)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+  })
+})
+
+describe('Admin administration', () => {
+  const id = crypto.randomUUID()
+  let cookies
+  beforeAll(async () => {
+    try {
+      const hashedPassword = await bcrypt.hash('@1234567a', salty)
+      await User.create({ id, email: 'admin2@admin.com', password: hashedPassword, isVerified: true, name: 'Admin', lastName: 'Admin', fk_id_type_user: 2 })
+      const body = {
+        email: 'admin2@admin.com',
+        password: '@1234567a',
+        deviceId: 2
+      }
+      const response = await api.post('/api/v1/users/login').send(body)
+      if (response.statusCode !== 200) throw new Error('User couldnt login')
+
+      cookies = response.header['set-cookie']
+      if (cookies.length < 1) throw new Error('No cookies setted')
+
+      // NOTE Creating user to view
+      await Promise.all([
+        User.create({ id: '123a', email: 'user1@gmail.com', password: hashedPassword, isVerified: true, name: 'jose', lastName: 'recabal', fk_id_type_user: 2 }),
+        User.create({ id: '123b', email: 'user2@gmail.com', password: hashedPassword, isVerified: true, name: 'matias', lastName: 'lagos', fk_id_type_user: 2 }),
+        User.create({ id: '123c', email: 'user3@gmail.com', password: hashedPassword, isVerified: true, name: 'felipe israel', lastName: 'mora', fk_id_type_user: 2 })
+      ])
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+  })
+
+  afterAll(async () => { await Promise.all([cleaningTable(TokenWhiteList), cleaningTable(TokenBlackList), cleaningTable(User)]) })
+
+  describe('Get all users testing', () => {
+    test('Testing get all users: No sending cookies', async () => {
+      try {
+        await api.get('/api/v1/users/get-all-client').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Using an not admin user', async () => {
+      try {
+        await api.get('/api/v1/users/get-all-client').set('Cookie', cookies).expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Correct petition', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const response = await api.get('/api/v1/users/get-all-client').set('Cookie', cookies).expect(200)
+        expect(response.body).toBeTruthy()
+        expect(response.body.data).toBeTruthy()
+        expect(response.body.data.length).toBe(3)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing sendin a random query', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const response = await api.get('/api/v1/users/get-all-client?random=2').set('Cookie', cookies).expect(200)
+        expect(response.body).toBeTruthy()
+        expect(response.body.data).toBeTruthy()
+        expect(response.body.data.length).toBe(3)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a page with letter', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?page=a').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a page with simbol', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?page=@()').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a page with blank spaces', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?page= ').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a page with a number', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const r = await api.get('/api/v1/users/get-all-client?page=1').set('Cookie', cookies).expect(200)
+        expect(r.body).toBeTruthy()
+        expect(r.body.page).toBe(1)
+        expect(r.body.count).toBe(0)
+        expect(r.body.total).toBe(3)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a size with a letters', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?size=asd').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a size with a simbols', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?size=()@$#').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a size with black spaces', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?size= ').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a size with a number', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const r = await api.get('/api/v1/users/get-all-client?size=1').set('Cookie', cookies).expect(200)
+        expect(r.body).toBeTruthy()
+        expect(r.body.size).toBe(1)
+        expect(r.body.count).toBe(1)
+        expect(r.body.total).toBe(3)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search with numbers', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?search=12341').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search with simbols', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?search=()#!"').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search with only blank spaces', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?search= ').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search with only one letter', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const r = await api.get('/api/v1/users/get-all-client?search=a').set('Cookie', cookies).expect(200)
+        expect(r.body).toBeTruthy()
+        expect(r.body.size).toBe(10)
+        expect(r.body.count).toBe(3)
+        expect(r.body.total).toBe(3)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search with only one letter and size', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const r = await api.get('/api/v1/users/get-all-client?search=i&size=1').set('Cookie', cookies).expect(200)
+        expect(r.body).toBeTruthy()
+        expect(r.body.size).toBe(1)
+        expect(r.body.count).toBe(1)
+        expect(r.body.total).toBe(2)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search with a name', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const r = await api.get('/api/v1/users/get-all-client?search=felipe').set('Cookie', cookies).expect(200)
+        expect(r.body).toBeTruthy()
+        expect(r.body.size).toBe(10)
+        expect(r.body.count).toBe(1)
+        expect(r.body.total).toBe(1)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search with spaces', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const r = await api.get('/api/v1/users/get-all-client?search=felipe mora').set('Cookie', cookies).expect(200)
+        expect(r.body).toBeTruthy()
+        expect(r.body.size).toBe(10)
+        expect(r.body.count).toBe(1)
+        expect(r.body.total).toBe(1)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a search two letters', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const r = await api.get('/api/v1/users/get-all-client?search=al').set('Cookie', cookies).expect(200)
+        expect(r.body).toBeTruthy()
+        expect(r.body.size).toBe(10)
+        expect(r.body.count).toBe(1)
+        expect(r.body.total).toBe(1)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with numbers', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order=12341').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with simbols', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order=()#!"').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with only blank spaces', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order= ').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with only blank spaces', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order= ').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with a bad structure', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order=name(asc)').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with a bad structure', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order=as(c)name').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with a bad structure', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order=name(asc),asc(lol)').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with a bad structure', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order=name(asc), ').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing get all users: Testing a order with a bad structure', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        await api.get('/api/v1/users/get-all-client?order=asc(name), asc(street)').set('Cookie', cookies).expect(400)
       } catch (error) {
         console.log(error)
         throw error

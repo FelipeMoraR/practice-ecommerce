@@ -792,6 +792,7 @@ export const updateUserAddressController = async (req, res) => {
   }
 }
 
+// NOTE Tested
 export const deleteUserAddressController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -829,7 +830,6 @@ export const getAllClientsController = async (req, res) => {
   try {
     const { page = 0, size = 10, search = '', order = 'asc(name)' } = req.query
     const searchSpaces = search.split(' ')
-
     let searchConfig = {}
     if (searchSpaces.length > 1) {
       const andConfig = [
@@ -885,7 +885,7 @@ export const getAllClientsController = async (req, res) => {
       const { count, rows } = await User.findAndCountAll(config)
       return { count, rows }
     })
-    if (resultUser.count <= 0) return res.status(200).send({ status: 200, data: [], count: resultUser.count, size: Number(size), page: page * size })
+    if (resultUser.rows.length <= 0) return res.status(200).send({ status: 200, data: [], count: 0, size: Number(size), page: Number(page), total: resultUser.count })
 
     const dataParsed = resultUser.rows.map(el => {
       const newUserToSave = { id: el.id, email: el.email, name: el.name, lastname: el.lastName, phone: el.phone, isVerified: el.isVerified, addresses: [] }
@@ -900,7 +900,7 @@ export const getAllClientsController = async (req, res) => {
       return newUserToSave
     })
     await saveLogController('INFO', 'Admin could see the clients', adminEmail, ip)
-    return res.status(200).send({ status: 200, data: dataParsed, count: resultUser.count, size: Number(size), page: page * size })
+    return res.status(200).send({ status: 200, data: dataParsed, count: resultUser.rows.length, size: Number(size), page: Number(page), total: resultUser.count })
   } catch (error) {
     console.log('getAllClientsController: ', error)
     if (error.parent.errno === 1054) {
