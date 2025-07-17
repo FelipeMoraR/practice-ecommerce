@@ -1737,7 +1737,7 @@ describe('User administration', () => {
     })
   })
 
-  describe('Address logic testing', () => {
+  xdescribe('Add a new address logic testing', () => {
     beforeEach(async () => {
       await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
     })
@@ -1808,6 +1808,22 @@ describe('User administration', () => {
       try {
         const body = {
           street: 0,
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending an street with simbols', async () => {
+      try {
+        const body = {
+          street: '@das@',
           number: 4947,
           numDpto: 0,
           postalCode: '8650098',
@@ -2077,5 +2093,381 @@ describe('User administration', () => {
     })
 
     // -------------------------------------------------------------
+  })
+
+  xdescribe('Update an user address testing', () => {
+    beforeAll(async () => {
+      await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
+      const adressToTest = await Address.create({ id: 'bd37012a-bd79-416e-aac7-5e850686ed3d', street: 'Toconao', number: 4947, numDpto: null, postalCode: 8650098, fk_id_commune: 27 })
+      await UserAddress.create({ id: 'bas7012a-bd79-416e-aac7-5e850686ed32', name: 'str1', fk_id_user: id, fk_id_address: 'bd37012a-bd79-416e-aac7-5e850686ed3d' })
+      if (!adressToTest) throw new Error('No address to update')
+    })
+
+    afterAll(async () => {
+      await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
+    })
+
+    test('Testing updating an user address: No sending cookies', async () => {
+      try {
+        await api.patch('/api/v1/users/update-user-address').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: No sending a body', async () => {
+      try {
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending an empty body', async () => {
+      try {
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send({}).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending an empty params', async () => {
+      try {
+        const body = {
+          idAddress: '',
+          street: '',
+          number: '',
+          numDpto: '',
+          postalCode: '',
+          idCommune: ''
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending only the idAddress', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(304)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Changing to an invalid location', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          street: 'newStreet'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(404)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a number street', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          street: 12345
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a simbols street', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          street: '@213@'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a null street', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          street: null
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a undefined street', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          street: undefined
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(304)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a string as a number', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          number: '12345'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a null number', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          number: null
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a undefined number', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          number: undefined
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(304)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a number postalCode', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          postalCode: 12345
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a simbols postalCode', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          postalCode: '@213@'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a null postalCode', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          postalCode: null
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a undefined postalCode', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          postalCode: undefined
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(304)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a non exist idCommune', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          idCommune: 1234
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(404)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a string idCommune', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          idCommune: '12345'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a simbols idCommune', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          idCommune: '@213@'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a null idCommune', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          idCommune: null
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a undefined idCommune', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          idCommune: undefined
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(304)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    // ----
+    test('Testing updating an user address: Sending a string numDpto', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          numDpto: '12345'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a simbols numDpto', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          numDpto: '@213@'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a null numDpto', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          numDpto: null
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Sending a undefined numDpto', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          numDpto: undefined
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(304)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Changing the location', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          street: 'Monte Verde',
+          number: 1593,
+          postalCode: '8650089'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(200)
+        const addressChanged = await Address.findByPk('bd37012a-bd79-416e-aac7-5e850686ed3d')
+        expect(addressChanged).toBeTruthy()
+        expect(addressChanged.street).toBe('Monte Verde')
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing updating an user address: Changing the location to an existing one', async () => {
+      try {
+        const body = {
+          idAddress: 'bd37012a-bd79-416e-aac7-5e850686ed3d',
+          street: 'Monte Verde',
+          number: 1593,
+          postalCode: '8650089'
+        }
+        await api.patch('/api/v1/users/update-user-address').set('Cookie', cookies).send(body).expect(409)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
   })
 })

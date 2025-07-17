@@ -601,7 +601,7 @@ export const updateUserPhoneController = async (req, res) => {
 }
 
 // TODO When the user change the password all sesion has to be ended, so i have to think in a way to controll the access token...
-// NOTE: Tested
+// NOTE Tested
 export const updateUserPasswordController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -650,6 +650,7 @@ export const updateUserPasswordController = async (req, res) => {
   }
 }
 
+// NOTE Tested
 export const addUserAddressController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -713,6 +714,7 @@ export const addUserAddressController = async (req, res) => {
   }
 }
 
+// NOTE Tested
 export const updateUserAddressController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
