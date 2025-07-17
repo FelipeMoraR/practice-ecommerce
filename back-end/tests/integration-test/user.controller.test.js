@@ -2884,5 +2884,23 @@ describe('Admin administration', () => {
         throw error
       }
     })
+
+    test('Testing get all users: Testing a order with a god structure', async () => {
+      try {
+        await User.update({ fk_id_type_user: 1 }, { where: { id } })
+        const res = await api.get('/api/v1/users/get-all-client').set('Cookie', cookies).expect(200)
+        const newRes = await api.get('/api/v1/users/get-all-client?order=desc(name)').set('Cookie', cookies).expect(200)
+        expect(res.body).toBeTruthy()
+        expect(newRes.body).toBeTruthy()
+        expect(res.body.page).toBe(newRes.body.page)
+        expect(res.body.count).toBe(newRes.body.count)
+        expect(res.body.size).toBe(newRes.body.size)
+        expect(res.body.total).toBe(newRes.body.total)
+        expect(res.body.data[0].name).toBe(newRes.body.data[2].name)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
   })
 })
