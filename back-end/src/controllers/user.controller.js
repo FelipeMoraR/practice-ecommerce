@@ -601,7 +601,7 @@ export const updateUserPhoneController = async (req, res) => {
 }
 
 // TODO When the user change the password all sesion has to be ended, so i have to think in a way to controll the access token...
-// Tested
+// NOTE: Tested
 export const updateUserPasswordController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 
@@ -660,7 +660,7 @@ export const addUserAddressController = async (req, res) => {
       const user = await User.findByPk(idUser)
       if (!user) throw new HttpError('User not found', 404)
 
-      const { street, number, numDpto, postalCode, idCommune } = req.body
+      const { street, number, numDpto = null, postalCode, idCommune } = req.body
 
       const comunneExist = await Commune.findByPk(idCommune)
       if (!comunneExist) {
@@ -703,7 +703,7 @@ export const addUserAddressController = async (req, res) => {
       await saveLogController('INFO', 'User saved a new address', user.email, ip)
     })
 
-    return res.status(200).send({ status: 200, message: 'User address updated!!!' })
+    return res.status(200).send({ status: 200, message: 'User address added!!!' })
   } catch (error) {
     console.log('addUserAddressController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })

@@ -4,6 +4,8 @@ import { getAllDataOfTable, cleaningTable, api, agent } from '../helper.js'
 import TokenWhiteList from '../../src/models/tokenWhiteList.model.js'
 import TokenBlackList from '../../src/models/tokenBlackList.model.js'
 import User from '../../src/models/user.model.js'
+import UserAddress from '../../src/models/userAddress.module.js'
+import Address from '../../src/models/address.model.js'
 import bcrypt from 'bcrypt'
 import { SALT_ROUNDS } from '../../src/config/config.js'
 
@@ -1733,5 +1735,347 @@ describe('User administration', () => {
         throw error
       }
     })
+  })
+
+  describe('Address logic testing', () => {
+    beforeEach(async () => {
+      await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
+    })
+
+    afterEach(async () => {
+      await Promise.all([cleaningTable(UserAddress), cleaningTable(Address)])
+    })
+
+    test('Testing adding an address: No sending cookies', async () => {
+      try {
+        await api.post('/api/v1/users/add-user-address').expect(401)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: No sending a body', async () => {
+      try {
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending an empty body', async () => {
+      try {
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send({}).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending an empty params', async () => {
+      try {
+        const body = {
+          street: '',
+          number: '',
+          numDpto: '',
+          postalCode: '',
+          idCommune: ''
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Not sending the street', async () => {
+      try {
+        const body = {
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending an street as a number', async () => {
+      try {
+        const body = {
+          street: 0,
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Not sending number', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending the number as a string', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: '4947',
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Not sending numDpto', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(200)
+        const { count, rows } = await getAllDataOfTable(UserAddress)
+        expect(rows).toBeTruthy()
+        expect(count).toBe(1)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending numDpto as a string', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: '0',
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Not sending postalCode', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending postalCode as a number', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: 8650098,
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending a short postalCode', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '868',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending a long postalCode', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '86812312312312312',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Not sending idCommune', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098'
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending a non exist idComune', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 100
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(404)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending an idComune as a string', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: '100'
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(400)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending an incongruous postal code an street', async () => {
+      try {
+        const body = {
+          street: 'random',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 18
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(404)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Trying to add the same address twice', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(200)
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(409)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Trying to more than 3 address at the same user', async () => {
+      try {
+        await Address.create({ id: 'bd37012a-bd79-416e-aac7-5e850686ed3d', street: 'str1', number: 12, numDpto: null, postalCode: 1234567, fk_id_commune: 12 })
+        await Address.create({ id: 'bd37012a-bd79-416e-aac7-5e850686ed32', street: 'str2', number: 12, numDpto: null, postalCode: 1234567, fk_id_commune: 13 })
+        await UserAddress.create({ id: 'bas7012a-bd79-416e-aac7-5e850686ed32', name: 'str1', fk_id_user: id, fk_id_address: 'bd37012a-bd79-416e-aac7-5e850686ed3d' })
+        await UserAddress.create({ id: 'bas7012a-bd79-416e-aac7-5e85q626ed32', name: 'str2', fk_id_user: id, fk_id_address: 'bd37012a-bd79-416e-aac7-5e850686ed32' })
+        const add1 = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+
+        const add2 = {
+          street: 'egipto',
+          number: 142,
+          numDpto: 0,
+          postalCode: '9280060',
+          idCommune: 18
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(add1).expect(200)
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(add2).expect(409)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    test('Testing adding an address: Sending correct params', async () => {
+      try {
+        const body = {
+          street: 'Toconao',
+          number: 4947,
+          numDpto: 0,
+          postalCode: '8650098',
+          idCommune: 27
+        }
+        await api.post('/api/v1/users/add-user-address').set('Cookie', cookies).send(body).expect(200)
+        const { count, rows } = await getAllDataOfTable(UserAddress)
+        expect(rows).toBeTruthy()
+        expect(count).toBe(1)
+      } catch (error) {
+        console.log(error)
+        throw error
+      }
+    })
+
+    // -------------------------------------------------------------
   })
 })
