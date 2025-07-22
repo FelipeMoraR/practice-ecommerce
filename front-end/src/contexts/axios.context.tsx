@@ -1,5 +1,5 @@
 import { createContext, ReactNode, useContext } from "react";
-import initCustomAxios from "../services/axios.service";
+import { initCustomAxios } from "../services/axios.service";
 import { UseAuthValidateSessionContext } from "./authValidation.context";
 import { AxiosInstance } from "axios";
 

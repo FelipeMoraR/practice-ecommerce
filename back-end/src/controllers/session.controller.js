@@ -24,7 +24,7 @@ export const refreshAccessTokenController = async (req, res) => {
     await saveLogController('INFO', 'User refresh token', user.email, ip)
 
     const accessToken = jwt.sign(
-      { id: user.id, username: user.username },
+      { id: user.id, userFullName: `${user.name} ${user.lastName}` },
       JWT_SECRET,
       { expiresIn: '10m' }
     )
@@ -35,7 +35,7 @@ export const refreshAccessTokenController = async (req, res) => {
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 1000 * 60 * 10 // 10 minutes
-      }).send({ status: 200, message: 'Token refreshed successfully' })
+      }).send({ status: 200, message: 'Token refreshed successfully', user: { id: user.id, userFullName: `${user.name} ${user.lastName}` } })
   } catch (error) {
     console.error('refreshToken::: ', error)
 
@@ -45,7 +45,7 @@ export const refreshAccessTokenController = async (req, res) => {
   }
 }
 
-export const getSessionInfoController = async (req, res) => {
+export const validateAccessTokenController = async (req, res) => {
   try {
     const accessToken = req.cookies.access_token
     if (!accessToken) throw new HttpError('Access token not provided', 401)
@@ -56,13 +56,10 @@ export const getSessionInfoController = async (req, res) => {
 
     return res.status(200).send({
       status: 200,
-      user: {
-        id: tokenIsValid.id,
-        username: tokenIsValid.username
-      }
+      user: { id: tokenIsValid.id, userFullName: tokenIsValid.userFullName }
     })
   } catch (error) {
-    console.log('getSessionInfoController::: ', error)
+    console.log('validateAccessTokenController::: ', error)
 
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
 

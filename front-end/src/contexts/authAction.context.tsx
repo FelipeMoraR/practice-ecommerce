@@ -27,7 +27,7 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
     const [ errorLogin, setErrorLogin ] = useState<string | null>(null);
     
     const { api } = UseAxiosContext();
-    const { setUserIsLoged } = UseAuthValidateSessionContext();
+    const { setUserIsLoged, setUserData } = UseAuthValidateSessionContext();
 
     const fetchLoginUser: (data: FormLoginValues) => void = async (data) => {
         try {
@@ -36,9 +36,10 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
             if (response.status !== 200) throw new Error('FetchLoginUser wasnt successfull');
 
             setUserIsLoged(true);
+            setUserData(response.data.user);
         } catch (error) {
             setUserIsLoged(false);
-
+            setUserData(null);
             if (error instanceof AxiosError) {
                 console.error("Error in fetchLoginUser::: ", error.response);
                 setErrorLogin(error.response?.data.message);

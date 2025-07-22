@@ -1,12 +1,12 @@
 import express from 'express'
 import {
   refreshAccessTokenController,
-  getSessionInfoController
+  validateAccessTokenController
 } from '../controllers/session.controller.js'
 
 const SessionRouter = express.Router()
 
 SessionRouter.get('/refresh-access-token', refreshAccessTokenController)
-SessionRouter.get('/get-session-info', getSessionInfoController)
+SessionRouter.get('/validate-access-token', validateAccessTokenController)
 
 export default SessionRouter

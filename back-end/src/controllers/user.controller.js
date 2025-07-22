@@ -50,6 +50,7 @@ const handlerGetPostalCode = async (street, number, comune) => {
 // NOTE login, Tested
 export const loginUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null // NOTE CF-Connecting-IP because i will upload in cloudefare
+
   try {
     const { email, password } = req.body
     const deviceIdReceived = req.cookies.id_device || req.body.deviceId || null
@@ -73,7 +74,7 @@ export const loginUserController = async (req, res) => {
       // NOTE Spam controll to user verification
       if (user.lastForgotPasswordSentAt && (now - user.lastVerificationEmailSentAt) / 1000 <= 90 && !user.isVerified) {
         await saveLogController('WARNING', 'Attemp to login but user wasnt verified. Email was already sended', email, ip)
-        return { accessToken: null, refreshToken: null, deviceId: null, isVerified: user.isVerified, emailSendInCooldown: true }
+        return { accessToken: null, refreshToken: null, deviceId: null, isVerified: user.isVerified, emailSendInCooldown: true, user: null }
       }
 
       // NOTE Sending email in case user isn't verified
@@ -84,7 +85,7 @@ export const loginUserController = async (req, res) => {
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
         await saveLogController('AUDIT', 'Attemp to login but user wasnt verified. Email was sended', email, ip)
 
-        return { accessToken: null, refreshToken: null, deviceId: null, isVerified: user.isVerified, emailSendInCooldown: false }
+        return { accessToken: null, refreshToken: null, deviceId: null, isVerified: user.isVerified, emailSendInCooldown: false, user: null }
       }
 
       // NOTE Generate access tokens
@@ -120,7 +121,7 @@ export const loginUserController = async (req, res) => {
       // NOTE type 2 is for refresh token
       await TokenWhiteList.create({ id: idRefreshToken, token: refreshToken, id_device: deviceIdReceived, expDate: expRefreshToken, fk_id_user: user.id, fk_id_type_token: 2 })
 
-      return { accessToken, refreshToken, deviceId: deviceIdReceived, isVerified: user.isVerified }
+      return { accessToken, refreshToken, deviceId: deviceIdReceived, isVerified: user.isVerified, user }
     })
 
     if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Email has to be verified but an email was already sended. Wait a while...' })
@@ -147,7 +148,7 @@ export const loginUserController = async (req, res) => {
         sameSite: 'strict',
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
       })
-      .send({ status: 200, message: 'User logged!!!' })
+      .send({ status: 200, message: 'User logged!!!', user: { id: result.user.id, userFullName: `${result.user.name} ${result.user.lastName}` } })
   } catch (error) {
     console.log('loginUserController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
@@ -947,7 +948,7 @@ export const createClientController = async (req, res) => {
   }
 }
 
-// TODO Front has to send a confirmation of the action, like "U sure of deleting this user? This cant ne undone "
+// REVIEW Front has to send a confirmation of the action, like "U sure of deleting this user? This cant ne undone "
 export const deleteClientController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
   const { email: adminEmail } = req.adminSession

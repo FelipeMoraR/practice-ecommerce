@@ -5,7 +5,7 @@ import { createCustomAxios } from "../services/axios.service.ts";
 // TODO this is temporal because user it will have more info
 interface UserProps {
     id: string;
-    username: string;
+    userFullName: string;
 }
 
 interface IAuthValidationSessionContextProps {
@@ -13,7 +13,7 @@ interface IAuthValidationSessionContextProps {
     isLoadingValidationSession: boolean;
     errorValidationSession: string | null;
     userData: UserProps | null;
-    setUserData: Dispatch<SetStateAction<UserProps>>;
+    setUserData: Dispatch<SetStateAction<UserProps | null>>;
     setUserIsLoged: Dispatch<SetStateAction<boolean>>;
 }
 
@@ -33,59 +33,47 @@ export const AuthValidateSessionContextProvider = ({ children }: { children: Rea
   const [ userIsLoged, setUserIsLoged ] = useState<boolean>(false);
   const [ isLoadingValidationSession, setIsLoadingValidationSession ] = useState<boolean>(false);
   const [ errorValidationSession, setErrorValidationSession ] = useState<string | null>(null);
-  const [ userData, setUserData ] = useState<UserProps>({
-    id: '',
-    username: ''
-  });
+  const [ userData, setUserData ] = useState<UserProps | null>(null);
   
-  const api = createCustomAxios(import.meta.env.VITE_ENDPOINT_BACKEND);
-
-  const fetchValidateSession = async () => {
-    try {
-        const response = await api.get('/sessions/refresh-access-token');
-        
-        if (response.status !== 200) throw new Error('fetchValidateSession wasnt successfull');
-        setUserIsLoged(true);
-    } catch (error){
-        setUserIsLoged(false);
-
-        if (error instanceof AxiosError) {
-            console.error('Axios error => ', error);
-            setErrorValidationSession(error.response?.data.message);
-            return
-        }
-        console.error("Unexpected error: ", error);
-        setErrorValidationSession('Something went wrong, please try again later');
-    } finally{
-        setIsLoadingValidationSession(false);
-    }
-  }
-
-  // TODO DELETE THIS B RO
-  const fetchGetInfoUserSession = async () => {
-    try {
-        const response = await api.get('/sessions/get-session-info');
-        
-        if (response.status !== 200) throw new Error('fetchGetInfoUserSession wasnt successfull');
-        setUserData(response.data.body.username);
-    } catch (error){
-        setUserIsLoged(false);
-
-        if (error instanceof AxiosError) {
-            console.error('Axios error => ', error);
-            setErrorValidationSession(error.response?.data.message);
-            return
-        }
-        console.error("Unexpected error: ", error);
-        setErrorValidationSession('Something went wrong, please try again later');
-    } finally{
-        setIsLoadingValidationSession(false);
-    }
-  }
-
-  // NOTE This will be mounted just one time
   useEffect(() => {
-    console.log('lol')
+    const api = createCustomAxios(import.meta.env.VITE_ENDPOINT_BACKEND);
+
+    const fetchValidateSession = async () => {
+      setIsLoadingValidationSession(true);
+      try {
+          const responseRefreshToken = await api.get('/sessions/refresh-access-token')
+            .catch(error => {
+              if (error.response?.status === 404) return null;
+              throw error;
+            });
+          
+          if (responseRefreshToken?.status === 200) {
+            setUserIsLoged(true);
+            setUserData(responseRefreshToken.data.user);
+            return;
+          }
+          // NOTE In case the user has left only the access token
+          const responseValidateAccessToken = await api.get('/sessions/validate-access-token');
+
+          if (responseValidateAccessToken.status !== 200) throw new Error('Access token validate wasnt successfull');
+          
+          setUserIsLoged(true);
+          setUserData(responseValidateAccessToken.data.user);
+      } catch (error){
+          setUserIsLoged(false);
+          setUserData(null);
+          if (error instanceof AxiosError) {
+              console.error('Axios error => ', error);
+              setErrorValidationSession(error.response?.data.message);
+              return
+          }
+          console.error("Unexpected error: ", error);
+          setErrorValidationSession('Something went wrong, please try again later');
+      } finally{
+          setIsLoadingValidationSession(false);
+      }
+    } 
+
     fetchValidateSession();
   }, []);
 

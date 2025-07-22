@@ -6,12 +6,12 @@ import { UseAuthActionContext } from "./contexts/authAction.context.tsx";
 
 function App() {
   const { api } = UseAxiosContext();
-  const { userIsLoged, userData } = UseAuthValidateSessionContext();
+  const { userIsLoged, userData, errorValidationSession } = UseAuthValidateSessionContext();
   const { fetchLoginUser, isLoadingLogin, errorLogin } = UseAuthActionContext();
 
   const fetchProtected = async () => {
     try {
-      const response = await api.post('/users/protected');
+      const response = await api.get('/users/get-user');
       console.log('response protected =>', response);
       return;
     } catch(error) {
@@ -51,9 +51,10 @@ function App() {
         ]}
       />
       {errorLogin && <p>{errorLogin}</p>}
+      {errorValidationSession && <p>{errorValidationSession}</p>}
       { userIsLoged && userData && (
         <>
-          <h2>You're logged maaan {userData.username}</h2>
+          <h2>You're logged maaan {userData.userFullName}</h2>
           <button onClick={() => {fetchProtected()}}>fech protected</button> 
         </>
       )}
