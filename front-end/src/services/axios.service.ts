@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 
-const createAxios: (baseURL: string) => AxiosInstance = (baseURL)  => {
+export const createCustomAxios: (baseURL: string) => AxiosInstance = (baseURL)  => {
     const axiosInstance: AxiosInstance = axios.create({
         baseURL,
         withCredentials: true
@@ -9,7 +9,7 @@ const createAxios: (baseURL: string) => AxiosInstance = (baseURL)  => {
     return axiosInstance;
 }
 
-const setupInterceptors = (axiosInstance: AxiosInstance) => {
+const setupLoogedInterceptors = (axiosInstance: AxiosInstance) => {
     axiosInstance.interceptors.request.use(
         (config: InternalAxiosRequestConfig) => config,
         (error) => Promise.reject(error)
@@ -19,7 +19,8 @@ const setupInterceptors = (axiosInstance: AxiosInstance) => {
         (response) => response,
         async (error) => {
             const originalRequest = error.config;
-
+            console.log('error =>', error);
+            // FIXME controll this xddd
             // TODO use .env for this
             // REVIEW bro, you controlled bad this in the backend, because you returned 401 when they dont has token so this was an infinite loop xd 
             // NOTE This is controll that but we already fixed
@@ -50,11 +51,13 @@ const setupInterceptors = (axiosInstance: AxiosInstance) => {
 }
 
 
-const initAxios = (baseUrl: string) => {
-    const axiosInstance = createAxios(baseUrl);
-    setupInterceptors(axiosInstance);
+const initCustomAxios = (baseUrl: string, userIsLogged = false) => {
+    const axiosCustomInstance = createCustomAxios(baseUrl);
+    if (userIsLogged) {
+        setupLoogedInterceptors(axiosCustomInstance)
+    }
 
-    return axiosInstance;
+    return axiosCustomInstance;
 }
 
-export default initAxios;
+export default initCustomAxios;

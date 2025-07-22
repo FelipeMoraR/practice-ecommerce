@@ -52,8 +52,6 @@ export const getSessionInfoController = async (req, res) => {
 
     const tokenIsValid = jwt.verify(accessToken, JWT_SECRET)
 
-    console.log('getSessionInfoController tokenIsValid:: ', tokenIsValid)
-
     if (!tokenIsValid) throw new HttpError('Access token is not valid', 406)
 
     return res.status(200).send({

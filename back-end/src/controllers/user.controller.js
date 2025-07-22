@@ -19,7 +19,7 @@ import { saveLogController } from './logger.controller.js'
 const salty = parseInt(SALT_ROUNDS, 10) // 10 because we wanted as a decimal
 
 // TODO Verify proxy
-// TODO Generate integration test, end-to-end and unit tests for all controllers.
+// TODO Generate integration test for the remaining controllers
 // REVIEW Id device has to be seted in the client, and the backend ensures that id in a cookie
 
 // NOTE Handlers
@@ -54,7 +54,7 @@ export const loginUserController = async (req, res) => {
     const { email, password } = req.body
     const deviceIdReceived = req.cookies.id_device || req.body.deviceId || null
 
-    if (!deviceIdReceived) throw new HttpError('Id device not seted', 403)
+    if (!deviceIdReceived) throw new HttpError('deviceId not seted', 403)
 
     const result = await sqDb.transaction(async () => {
       // NOTE extract the actual date FROM DB
@@ -821,7 +821,7 @@ export const deleteUserAddressController = async (req, res) => {
   }
 }
 
-// NOTE Admin basic crud, tested
+// NOTE Admin basic crud, Tested
 export const getAllClientsController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
   const { email: adminEmail } = req.adminSession

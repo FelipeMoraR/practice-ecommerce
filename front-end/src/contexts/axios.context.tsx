@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext } from "react";
-import initAxios from "../services/axios.service";
+import initCustomAxios from "../services/axios.service";
+import { UseAuthValidateSessionContext } from "./authValidation.context";
 import { AxiosInstance } from "axios";
 
 interface AxiosProps {
@@ -18,12 +19,12 @@ export const UseAxiosContext = () => {
     return axiosContext;
 }
 
-export const AxiosContextProvider = ({ children }: {children :ReactNode}) => {
-    // TODO use .env for this
-    const api = initAxios('http://localhost:3000/api');
-
+export const AxiosContextProvider = ({ children }: {children: ReactNode}) => {
+    const { userIsLoged } = UseAuthValidateSessionContext();
+    const api = initCustomAxios(import.meta.env.VITE_ENDPOINT_BACKEND, userIsLoged);
+    
     return (
-        <AxiosContext.Provider value={{api}}>
+        <AxiosContext.Provider value={{ api }}>
             {children}
         </AxiosContext.Provider>
     )
