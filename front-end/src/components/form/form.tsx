@@ -3,7 +3,7 @@ import { SubmitHandler, useForm, Path } from "react-hook-form";
 import { ZodTypeAny, z } from "zod";
 import Input from "../input/input.tsx";
 
-type Mode = "onBlur" | "onChange" | "onSubmit" | "onTouched" | "all" | undefined
+type Mode = "onBlur" | "onChange" | "onSubmit" | "onTouched" | "all" | undefined;
 
 interface InputProps {
     name: string;
