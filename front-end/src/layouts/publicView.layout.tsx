@@ -10,7 +10,7 @@ const PublicViewLayout = ({ children }: { children: ReactNode}) => {
             anchor: 'https://www.youtube.com/watch?v=DzpmhfiBCO8',
             text: 'Home',
             subPages: null
-        }, 
+        },
         {
             anchor: 'Products',
             text: 'Products',

@@ -1,70 +1,57 @@
-import { UseAuthValidateSessionContext } from '../../contexts/authValidation.context';
-import { ChevronDownIcon, UserIcon, UserPlusIcon } from '@heroicons/react/24/solid'
 import { INavbar } from '../../models/types';
+import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/solid'
+import NavBarContent from './navbarContent';
 import Button from '../button/button';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const Navbar = ({ imgRoute, pages }: INavbar) => {
-    const { userIsLoged } = UseAuthValidateSessionContext();
-    const [ elementClicked, setElementClicked ] = useState<number | null>(null);
+    const [ showNavMobile , setShowNavMobile ] = useState<boolean>(false);
+    const [ sizeScreen, setSizeScreen ] = useState<number>(window.innerWidth);
 
-    const handlerNavbarClick = (num: number): void => {
+    const handlerShowNavbar = (): void => {
         if (window.innerWidth > 1024) return;
         
-        setElementClicked(prev => {
-            if (prev === num) return null;
-            return num;
-        });
+        setShowNavMobile(prev => !prev);
     }
 
+    useEffect(() => {
+        const handleResize = (): void => setSizeScreen(window.innerWidth);
+        
+        window.addEventListener('resize', handleResize);
+
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     return (
-        <nav className = "fixed h-full flex p-2 bg-indigo-100 flex-col gap-4 lg:justify-center lg:bg-transparent lg:flex-row lg:gap-12 lg:h-24 lg:sticky">
-            <div className = 'flex gap-6'>
-                <div className = "w-20 h-full hidden lg:block">
-                    <img src = {imgRoute} alt="logoNavbar" className='size-full object-contain rounded-full border-1 border-black' />
-                </div>
-
-                { pages && (
-                    <ul className='flex gap-3 w-full items-center justify-center flex-col lg:w-auto lg:flex-row'>
-                        { pages.map((page, index) => (
-                            <li 
-                                className = 'relative w-full p-2 group lg:hover:cursor-pointer lg:w-auto lg:h-[40px] lg:hover:bg-indigo-300 lg:transition-bg-indigo-300 lg:duration-100' 
-                                key = {index}
-                            >
-                                <div className = 'flex gap-2 justify-between'>
-                                    <a href = {page.anchor}>{page.text}</a>
-
-                                    { page.subPages && <ChevronDownIcon className="w-5 h-5" onClick = {() => handlerNavbarClick(index)} /> }
-                                </div>
-                                
-                                { page.subPages && (
-                                    <ul className={`relative ${index === elementClicked ? 'opacity-100 h-auto' : 'opacity-0 h-0'} overflow-hidden right-0 w-full flex flex-col gap-1 p-2 bg-indigo-300 transition-height duration-200 pointer-events-none lg:overflow-auto lg:h-auto lg:opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:transition-opacity lg:duration-200 lg:absolute`}>
-                                        { page.subPages.map((subPage, subIndex) => (
-                                            <li className='lg:opacity-50 lg:hover:opacity-100' key = {[index,subIndex].join('')}>
-                                                <a href = {subPage.anchor}>{subPage.text}</a>
-                                            </li>
-                                        ))}
-                                    </ul>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
+        <>  
             
             
-            { userIsLoged ? (
-                <div>
-                    logeao
-                </div>
+            {sizeScreen > 1023 ? (
+                <nav className = 'h-24 px-8 py-2 flex flex-row justify-between gap-12 bg-indigo-200'>
+                    <NavBarContent imgRoute = {imgRoute} pages = {pages} />
+                </nav>
             ) : (
-                <div className='flex gap-3 flex-row lg:items-center'>
-                    <Button typeBtn = 'login' textBtn = 'Login' iconBtn = { UserIcon } />
-                    <Button typeBtn = 'register' textBtn = 'Register' iconBtn = { UserPlusIcon } />
-                </div>
-            )}
+                <>
+                    <nav className = 'flex justify-center p-2 bg-indigo-200 relative'>
+                        <div className = "w-15 h-full">
+                            <img src = {imgRoute} alt="logoNavbarMobile" className='size-full object-contain rounded-full border-1 border-black' />
+                        </div>
+                        <div className='absolute right-0 top-0 w-[76px] h-full'>
+                            <Button typeBtn = 'primary' iconBtn = {Bars3Icon} onClickBtn = {handlerShowNavbar} />
+                        </div>
+                    </nav>
 
-        </nav>
+                    <aside className = {`fixed transform ${showNavMobile ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} transition-all duration-300 right-0 top-0 h-full p-3 bg-indigo-100 flex flex-col gap-6`}>
+                        <div className='absolute w-[40px] -left-8 top-2'>
+                            <Button typeBtn = 'primary' iconBtn = {XMarkIcon} onClickBtn = {handlerShowNavbar}/>
+                        </div>
+                        <NavBarContent imgRoute = {imgRoute} pages = {pages} />
+                    </aside>
+                </>
+                
+            )}
+            
+        </>
     )
 }
 
