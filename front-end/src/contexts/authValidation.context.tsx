@@ -31,9 +31,9 @@ export const UseAuthValidateSessionContext = () => {
 
 export const AuthValidateSessionContextProvider = ({ children }: { children: ReactNode }) => {
   const [ userIsLoged, setUserIsLoged ] = useState<boolean>(false);
+  const [ userData, setUserData ] = useState<UserProps | null>(null);
   const [ isLoadingValidationSession, setIsLoadingValidationSession ] = useState<boolean>(false);
   const [ errorValidationSession, setErrorValidationSession ] = useState<string | null>(null);
-  const [ userData, setUserData ] = useState<UserProps | null>(null);
   
   useEffect(() => {
     const api = createCustomAxios(import.meta.env.VITE_ENDPOINT_BACKEND);

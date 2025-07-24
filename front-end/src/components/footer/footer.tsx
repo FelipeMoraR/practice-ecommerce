@@ -1,6 +1,10 @@
 
 const Footer = () => {
-    return <h1>am the footer</h1>
+    return (
+        <footer className = 'absolute bottom-0 w-full bg-indigo-200 '>
+            footer
+        </footer>
+    )
 }
 
 export default Footer;

@@ -1,3 +1,7 @@
 * {
     font-family: 'Tektur', sans-serif;
 }
+
+body {
+    margin-bottom: 40px;
+}

@@ -50,6 +50,7 @@ const UserRouter = express.Router()
 // SECTION GET
 // ANCHOR Public get
 // ANCHOR Private get
+// FIXME not use verb on the endpoints
 UserRouter.get('/get-all-client', privateRoute, adminRoute, validateSquema(getClientsSchema, 'query'), getAllClientsController)
 UserRouter.get('/get-user', privateRoute, viewUserController)
 

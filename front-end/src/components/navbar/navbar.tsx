@@ -7,7 +7,7 @@ import { useEffect, useState } from 'react';
 const Navbar = ({ imgRoute, pages }: INavbar) => {
     const [ showNavMobile , setShowNavMobile ] = useState<boolean>(false);
     const [ sizeScreen, setSizeScreen ] = useState<number>(window.innerWidth);
-
+    
     const handlerShowNavbar = (): void => {
         if (window.innerWidth > 1024) return;
         
@@ -24,8 +24,6 @@ const Navbar = ({ imgRoute, pages }: INavbar) => {
 
     return (
         <>  
-            
-            
             {sizeScreen > 1023 ? (
                 <nav className = 'h-24 px-8 py-2 flex flex-row justify-between gap-12 bg-indigo-200'>
                     <NavBarContent imgRoute = {imgRoute} pages = {pages} />

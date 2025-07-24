@@ -1,13 +1,14 @@
 import { UseAuthValidateSessionContext } from '../../contexts/authValidation.context';
 import { INavbar } from "../../models/types";
-import { ChevronDownIcon, UserIcon, UserPlusIcon } from '@heroicons/react/24/solid'
+import { ChevronDownIcon, UserIcon, ArrowRightEndOnRectangleIcon, ArrowLeftEndOnRectangleIcon, PlusCircleIcon } from '@heroicons/react/24/solid'
 import Button from "../button/button";
+import { Link, useNavigate } from "react-router";
 import { useState } from 'react';
 
 const NavBarContent = ({ imgRoute, pages }: INavbar) => {
     const { userIsLoged } = UseAuthValidateSessionContext();
     const [ elementClicked, setElementClicked ] = useState<number | null>(null);
-    
+    const navigate = useNavigate();
 
     const handlerNavbarSlidersClick = (num: number): void => {
         if (window.innerWidth > 1024) return;
@@ -32,7 +33,7 @@ const NavBarContent = ({ imgRoute, pages }: INavbar) => {
                             key = {index}
                         >
                             <div className = 'flex gap-2 justify-between'>
-                                <a href = {page.anchor}>{page.text}</a>
+                                <Link to = {page.anchor}> {page.text} </Link>
 
                                 { page.subPages && <ChevronDownIcon className="w-5 h-5" onClick = {() => handlerNavbarSlidersClick(index)} /> }
                             </div>
@@ -41,7 +42,7 @@ const NavBarContent = ({ imgRoute, pages }: INavbar) => {
                                 <ul className={`relative ${index === elementClicked ? 'opacity-100 h-auto p-2' : 'opacity-0 h-0 p-0'} overflow-hidden right-0 w-full flex flex-col gap-1  bg-indigo-300 transition-height duration-200 lg:p-2 lg:pointer-events-none lg:overflow-auto lg:h-auto lg:opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:transition-opacity lg:duration-200 lg:absolute`}>
                                     { page.subPages.map((subPage, subIndex) => (
                                         <li className='lg:opacity-50 lg:hover:opacity-100' key = {[index,subIndex].join('')}>
-                                            <a href = {subPage.anchor}>{subPage.text}</a>
+                                            <Link to = {subPage.anchor}>{subPage.text}</Link>
                                         </li>
                                     ))}
                                 </ul>
@@ -54,17 +55,23 @@ const NavBarContent = ({ imgRoute, pages }: INavbar) => {
                 
                 
             { userIsLoged ? (
-                <div>
-                    logeao
+                <div className = 'flex gap-3 flex-row lg:items-center'>
+                    <div className = 'h-[40px]'>
+                        <Button typeBtn = 'primary' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/register')} />
+                    </div>
+                    
+                    <div className = 'h-[40px]'>
+                        <Button typeBtn = 'logout' textBtn = 'Logout' iconBtn = { ArrowLeftEndOnRectangleIcon } onClickBtn = {() => navigate('/register')} />
+                    </div>                    
                 </div>
             ) : (
                 <div className = 'flex gap-3 flex-row lg:items-center'>
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'login' textBtn = 'Login' iconBtn = { UserIcon } onClickBtn = {() => console.log('hola') } />
+                        <Button typeBtn = 'login' textBtn = 'Login' iconBtn = { ArrowRightEndOnRectangleIcon } onClickBtn = {() => navigate('/login') } />
                     </div>
                         
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'register' textBtn = 'Register' iconBtn = { UserPlusIcon } onClickBtn = {() => console.log('chao')} />
+                        <Button typeBtn = 'register' textBtn = 'Register' iconBtn = { PlusCircleIcon } onClickBtn = {() => navigate('/register')} />
                     </div>
                 </div>
             )}
