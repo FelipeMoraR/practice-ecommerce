@@ -1,6 +1,7 @@
 import { Routes, Route } from "react-router-dom"
 import PrivateRoute from "./components/routes/privateRoute"
 import PageLayout from "./layouts/pageLayout"
+import Home from "./pages/public/home.page"
 import { IPageNavbarFather } from "./models/types/navbar.model"
 import { UseAuthValidateSessionContext } from "./contexts/authValidation.context"
 import LoginPage from "./pages/public/login.page";
@@ -76,7 +77,7 @@ function App() {
   
   return (
     <Routes>
-      <Route path = '/' element = {<PageLayout children = {<h1> public </h1>} pages = {pages} />} />
+      <Route path = '/' element = {<PageLayout children = {<Home/>} pages = {pages} />} />
       <Route path = '/login' element = {<PageLayout children = {<LoginPage/>} pages = {pages} />} />
       <Route path = '/register' element = {<PageLayout children = {<h1> register </h1>} pages = {pages} />} />
 

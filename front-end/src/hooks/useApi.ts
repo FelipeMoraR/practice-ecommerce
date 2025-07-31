@@ -1,38 +1,30 @@
 import { AxiosResponse } from "axios";
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react";
 
-type IAutoCall = boolean | null;
-type IUseApi<T> = Promise<AxiosResponse<T>>;
+const useApi = <T>(promise: Promise<AxiosResponse<T>>, autoCall: boolean = false) => {
+  const [apiIsLoading, setApiIsLoading] = useState(false);
+  const [errorApi, setErrorApi] = useState<string | null>(null);
+  const [responseApi, setResponseApi] = useState<AxiosResponse<T> | null>(null);
 
-const useApi = <T>(promise: IUseApi<T>, autoCall: IAutoCall)  => {
-    const [ apiIsLoading, setApiIsLoading ] = useState<boolean>(false);
-    const [ errorApi, setErrorApi ] = useState<string | null>(null);
-    const [ responseApi, setResponseApi ] = useState<AxiosResponse<T> | null>(null)
-
-    const callApi = async () => {
-        try {
-            setApiIsLoading(true);
-            const response: AxiosResponse<T> = await promise;
-            if (response.status !== 200) {
-                setApiIsLoading(false);
-                setErrorApi(`Unexpected status code: ${response.status}`);
-                return;
-            }
-            setResponseApi(response);
-        } catch (error) {
-            console.log('Error in use api: ', error);
-            setErrorApi(error instanceof Error ? error.message : String(error));
-            throw error;
-        } finally {
-            setApiIsLoading(false)
-        }
+  const callApi = useCallback(async () => {
+    try {
+      setApiIsLoading(true);
+      setErrorApi(null);
+      const response = await promise;
+      setResponseApi(response);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setErrorApi(message);
+    } finally {
+      setApiIsLoading(false);
     }
-    
-    useEffect(() => {
-        if (autoCall) callApi();
-    }, [autoCall]);
+  }, [promise]);
 
-    return {apiIsLoading, errorApi, responseApi}
-}
+  useEffect(() => {
+    if (autoCall) callApi();
+  }, [autoCall, callApi]);
+
+  return { apiIsLoading, errorApi, responseApi, callApi };
+};
 
 export default useApi;

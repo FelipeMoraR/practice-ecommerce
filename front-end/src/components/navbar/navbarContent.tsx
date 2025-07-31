@@ -1,6 +1,6 @@
 import { UseAuthValidateSessionContext } from '../../contexts/authValidation.context';
 import { INavbar } from "../../models/types";
-import { ChevronDownIcon, UserIcon, ArrowRightEndOnRectangleIcon, ArrowLeftEndOnRectangleIcon, PlusCircleIcon } from '@heroicons/react/24/solid'
+import { ChevronDownIcon, UserIcon } from '@heroicons/react/24/solid'
 import Button from "../button/button";
 import { Link, useNavigate } from "react-router";
 import { useState } from 'react';
@@ -57,21 +57,21 @@ const NavBarContent = ({ imgRoute, pages }: INavbar) => {
             { userIsLoged ? (
                 <div className = 'flex gap-3 flex-row lg:items-center'>
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'primary' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = 'primary-red' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/register')} />
                     </div>
                     
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'logout' textBtn = 'Logout' iconBtn = { ArrowLeftEndOnRectangleIcon } onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = 'primary-red' textBtn = 'Logout'  onClickBtn = {() => navigate('/register')} />
                     </div>                    
                 </div>
             ) : (
                 <div className = 'flex gap-3 flex-row lg:items-center'>
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'login' textBtn = 'Login' iconBtn = { ArrowRightEndOnRectangleIcon } onClickBtn = {() => navigate('/login') } />
+                        <Button typeBtn = 'primary-red' textBtn = 'Login'  onClickBtn = {() => navigate('/login') } />
                     </div>
                         
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'register' textBtn = 'Register' iconBtn = { PlusCircleIcon } onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = 'primary-green' textBtn = 'Register' onClickBtn = {() => navigate('/register')} />
                     </div>
                 </div>
             )}
