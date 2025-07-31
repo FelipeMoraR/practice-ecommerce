@@ -51,6 +51,24 @@ function App() {
                     text: 'contact3'
                 }
             ]
+        },
+        {
+            anchor: 'Contact',
+            text: 'Contact',
+            subPages: [
+                {
+                    anchor: 'contact1',
+                    text: 'contact1'
+                },
+                {
+                    anchor: 'contact2',
+                    text: 'contact2'
+                },
+                {
+                    anchor: 'contact3',
+                    text: 'contact3'
+                }
+            ]
         }
   ]
 

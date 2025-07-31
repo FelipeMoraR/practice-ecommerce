@@ -9,6 +9,17 @@ html {
   box-sizing: inherit;
 }
 
-body {
-    margin-bottom: 40px;
+#root {
+  display: grid;
+  min-height: 100dvh;
+  grid-template-rows: auto 1fr auto;
+  width: 100%;        
+  overflow-x: hidden;    
 }
+
+/* Make direct children fit within grid */
+#root > * {
+  min-width: 0; 
+  max-width: 100%;  
+}
+
