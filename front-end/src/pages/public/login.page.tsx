@@ -1,64 +1,48 @@
 import { UseAuthActionContext } from "../../contexts/authAction.context";
-import { UseAuthValidateSessionContext } from "../../contexts/authValidation.context";
-import { UseAxiosContext } from "../../contexts/axios.context";
 import { FormLoginValues, loginSchema } from "../../models/schemas";
 import Loader from "../../components/loader/loader";
 import Form from "../../components/form/form";
+import Text from "../../components/text/text";
+
 
 const LoginPage = () => {
-    const { api } = UseAxiosContext();
-    const { userIsLoged, userData, errorValidationSession } = UseAuthValidateSessionContext();
     const { fetchLoginUser, isLoadingLogin, errorLogin } = UseAuthActionContext();
-
-    const fetchProtected = async () => {
-        try {
-            const response = await api.get('/users/get-user');
-            console.log('response protected =>', response);
-            return;
-        } catch(error) {
-            console.error('Error in protected fetch', error);
-            return;
-        }
-    }
-
+    
     const onSubmit = (data: FormLoginValues) => fetchLoginUser(data);
-
-    if (isLoadingLogin) {
-        return (
-            <Loader text="Loading login"/>
-        )
-    }
 
     return (
         <>
-            <h1 className="mt-2 text-gray-700">Form :D</h1>
-            <Form 
-                mode="onBlur"
-                schema={loginSchema}
-                defaultValues={ {email: '', password: '', deviceId: 1} }
-                onSubmit={onSubmit}
-                fields={[
-                {
-                    name: 'email',
-                    label: 'Test email',
-                    type: 'text'
-                },
-                {
-                    name: 'password',
-                    label: 'Test password',
-                    type: 'text'
-                }
-                ]}
-            />
-            {errorLogin && <p>{errorLogin}</p>}
-            {errorValidationSession && <p>{errorValidationSession}</p>}
-            { userIsLoged && userData && (
-                <>
-                <h2>You're logged maaan {userData.userFullName}</h2>
-                <button onClick={() => {fetchProtected()}}>fech protected</button> 
-                </>
-            )}
+            {isLoadingLogin && <Loader text="loading" />}
+
+            <section className="mx-auto my-6 flex flex-col p-4">
+                <div className="bg-gray outline-4 outline-black-darkest border-t-4 border-l-4 border-black-lighter w-fit p-1">
+                    <Text typeText="h1" color="white" text="Login" size="2xl"/>
+                </div>
+                <Form 
+                    styleForm="primary"
+                    mode="onBlur"
+                    schema={loginSchema}
+                    defaultValues={ {email: '', password: '', deviceId: 1} }
+                    onSubmit={onSubmit}
+                    fields={[
+                    {
+                        name: 'email',
+                        label: 'Test email',
+                        type: 'text',
+                        placeholder: 'Insert email'
+                    },
+                    {
+                        name: 'password',
+                        label: 'Test password',
+                        type: 'password',
+                        placeholder: 'Insert password'
+                    }
+                    ]}
+                    errorSubmit={errorLogin}
+                /> 
+            </section>
         </>
+        
     )
 }
 

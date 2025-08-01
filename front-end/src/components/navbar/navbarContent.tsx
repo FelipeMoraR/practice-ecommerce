@@ -21,7 +21,7 @@ const NavBarContent = ({ imgRoute, pages, elementClicked, handlerNavbarSlidersCl
                 <ul className='flex gap-3 w-full items-center justify-center flex-col lg:w-auto lg:flex-row items-end'>
                     { pages.map((page, index) => (
                         <li 
-                            className = {`relative w-full p-2 border-4 group lg:hover:cursor-pointer lg:w-auto lg:hover:bg-grey lg:hover:border-grey-lightest lg:hover:text-grey-lightest lg:transition-all lg:duration-100 lg:text-2xl lg:border-t-4 lg:border-l-4 lg:border-r-4 lg:border-b-0 ${index === elementClicked ? 'bg-grey transition-background-color duration-150 border-grey-lightest text-grey-lightest' : 'bg-grey-lightest'}`} 
+                            className = {`relative w-full p-2 border-4 group lg:hover:cursor-pointer lg:w-auto lg:hover:bg-gray lg:hover:border-gray-lightest lg:hover:text-gray-lightest lg:transition-all lg:duration-100 lg:text-2xl lg:border-t-4 lg:border-l-4 lg:border-r-4 lg:border-b-0 ${index === elementClicked ? 'bg-gray transition-background-color duration-150 border-gray-lightest text-gray-lightest' : 'bg-gray-lightest'}`} 
                             key = {index}
                         >
                             <div className = 'flex gap-2 justify-between items-center'>
@@ -31,9 +31,9 @@ const NavBarContent = ({ imgRoute, pages, elementClicked, handlerNavbarSlidersCl
                             </div>
                                     
                             { page.subPages && (
-                                <ul className={`relative ${index === elementClicked ? 'opacity-100 h-auto p-2 mt-1' : 'opacity-0 h-0 p-0'} overflow-hidden right-0 w-full flex flex-col gap-2 bg-grey outline-4 transition-height duration-200 lg:p-2 lg:pointer-events-none lg:overflow-auto lg:h-auto lg:opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:transition-opacity lg:duration-200 lg:absolute lg:mt-2`}>
+                                <ul className={`relative ${index === elementClicked ? 'opacity-100 h-auto p-2 mt-1' : 'opacity-0 h-0 p-0'} overflow-hidden right-0 w-full flex flex-col gap-2 bg-gray outline-4 transition-height duration-200 lg:p-2 lg:pointer-events-none lg:overflow-auto lg:h-auto lg:opacity-0 lg:group-hover:pointer-events-auto lg:group-hover:opacity-100 lg:transition-opacity lg:duration-200 lg:absolute lg:mt-2 lg:gap-0`}>
                                     { page.subPages.map((subPage, subIndex) => (
-                                        <li className='lg:opacity-50 lg:hover:opacity-100' key = {[index,subIndex].join('')}>
+                                        <li className='lg:opacity-50 lg:hover:opacity-100 lg:hover:border-4 lg:hover:p-1 lg:transition-all lg:duration-50' key = {[index,subIndex].join('')}>
                                             <Link to = {subPage.anchor}>{subPage.text}</Link>
                                         </li>
                                     ))}
@@ -47,21 +47,21 @@ const NavBarContent = ({ imgRoute, pages, elementClicked, handlerNavbarSlidersCl
             { userIsLoged ? (
                 <div className = 'flex gap-3 flex-row lg:items-center'>
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'primary-red' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = "button" typeStyleBtn = 'primary-red' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/register')} />
                     </div>
                     
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'primary-red' textBtn = 'Logout'  onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = "button" typeStyleBtn = 'primary-red' textBtn = 'Logout'  onClickBtn = {() => navigate('/register')} />
                     </div>                    
                 </div>
             ) : (
                 <div className = 'flex gap-3 flex-row lg:items-center'>
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'primary-red' textBtn = 'Login'  onClickBtn = {() => navigate('/login') } />
+                        <Button typeBtn = "button" typeStyleBtn = 'primary-red' textBtn = 'Login'  onClickBtn = {() => navigate('/login') } />
                     </div>
                         
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = 'primary-green' textBtn = 'Register' onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = "button" typeStyleBtn = 'primary-green' textBtn = 'Register' onClickBtn = {() => navigate('/register')} />
                     </div>
                 </div>
             )}

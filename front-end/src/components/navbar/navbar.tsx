@@ -36,25 +36,25 @@ const Navbar = ({ imgRoute, pages }: INavbar) => {
     return (
         <>  
             {sizeScreen > 1023 ? (
-                <nav className = 'h-24 px-8 pt-2 flex flex-row justify-between gap-12 bg-grey-lighter outline-4'>
+                <nav className = 'h-24 px-8 pt-2 flex flex-row justify-between gap-12 bg-gray-lighter outline-4'>
                     <NavBarContent imgRoute = {imgRoute} pages = {pages} elementClicked={elementClicked} handlerNavbarSlidersClick={handlerNavbarSlidersClick} />
                 </nav>
             ) : (
                 <>
-                    <nav className = 'flex justify-center p-2 bg-grey-lighter outline-4 relative'>
+                    <nav className = 'flex justify-center p-2 bg-gray-lighter outline-4 relative'>
                         <div className = "w-15 h-full">
                             <img src = {imgRoute} alt="logoNavbarMobile" className='size-full object-contain border-4 border-black' />
                         </div>
                         <div className='absolute right-0 top-0 w-[76px] h-full'>
-                            <Button typeBtn = 'primary-neutral' iconBtn = {Bars3Icon} onClickBtn = {handlerShowNavbar} />
+                            <Button typeBtn = "button" typeStyleBtn = 'primary-neutral' iconBtn = {Bars3Icon} onClickBtn = {handlerShowNavbar} />
                         </div>
                     </nav>
                     <div className={`fixed z-40 bg-black opacity-70 size-full ${showNavMobile ? 'block' : 'hidden'}`}>
                         
                     </div>
-                    <aside className = {`fixed z-50 transform ${showNavMobile ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} transition-all duration-300 right-0 top-0 h-full p-3 pt-15 bg-grey-lighter border-4 flex flex-col gap-6`}>
+                    <aside className = {`fixed z-50 transform ${showNavMobile ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} transition-all duration-300 right-0 top-0 h-full p-3 pt-15 bg-gray-lighter border-4 flex flex-col gap-6`}>
                         <div className='absolute w-[40px] -left-8 top-2'>
-                            <Button typeBtn = 'primary-neutral' iconBtn = {XMarkIcon} onClickBtn = {handlerShowNavbar}/>
+                            <Button typeBtn = "button" typeStyleBtn = 'primary-neutral' iconBtn = {XMarkIcon} onClickBtn = {handlerShowNavbar}/>
                         </div>
                         <NavBarContent imgRoute = {imgRoute} pages = {pages} elementClicked={elementClicked} handlerNavbarSlidersClick={handlerNavbarSlidersClick} />
                     </aside>

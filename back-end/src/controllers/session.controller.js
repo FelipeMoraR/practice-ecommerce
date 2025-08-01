@@ -35,7 +35,7 @@ export const refreshAccessTokenController = async (req, res) => {
         secure: NODE_ENV === 'production',
         sameSite: 'strict',
         maxAge: 1000 * 60 * 10 // 10 minutes
-      }).send({ status: 200, message: 'Token refreshed successfully', user: { id: user.id, userFullName: `${user.name} ${user.lastName}` } })
+      }).send({ status: 200, message: 'Token refreshed successfully', user: { id: user.id, userFullName: `${user.name} ${user.lastName}`, typeUser: user.fk_id_type_user } })
   } catch (error) {
     console.error('refreshToken::: ', error)
 
@@ -56,7 +56,7 @@ export const validateAccessTokenController = async (req, res) => {
 
     return res.status(200).send({
       status: 200,
-      user: { id: tokenIsValid.id, userFullName: tokenIsValid.userFullName }
+      user: { id: tokenIsValid.id, userFullName: tokenIsValid.userFullName, typeUser: tokenIsValid.typeUser }
     })
   } catch (error) {
     console.log('validateAccessTokenController::: ', error)

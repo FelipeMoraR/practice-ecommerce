@@ -22,15 +22,23 @@ export const UseAuthActionContext = () => {
     return context;
 }
 
+// TODO set the id device in localstorage
+
 export const AuthActionContextProvider = ({ children }: {children: ReactNode}) => {
     const [ isLoadingLogin, setIsLoadingLogin ] = useState<boolean>(false);
     const [ errorLogin, setErrorLogin ] = useState<string | null>(null);
     
     const { api } = UseAxiosContext();
-    const { setUserIsLoged, setUserData } = UseAuthValidateSessionContext();
+    const { setUserIsLoged, setUserData, userIsLoged } = UseAuthValidateSessionContext();
 
     const fetchLoginUser: (data: FormLoginValues) => void = async (data) => {
+        if(userIsLoged) {
+            setErrorLogin('You already are logged, logout to use login');
+            return;
+        }
         try {
+            setIsLoadingLogin(true);
+            setErrorLogin(null);
             const response = await api.post("/users/login", data);
             
             if (response.status !== 200) throw new Error('FetchLoginUser wasnt successfull');
@@ -42,7 +50,7 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
             setUserData(null);
             if (error instanceof AxiosError) {
                 console.error("Error in fetchLoginUser::: ", error.response);
-                setErrorLogin(error.response?.data.message);
+                setErrorLogin(error.response?.data.status === 400 ? 'Invalid email or password' : error.response?.data.message);
 
                 return;
             }

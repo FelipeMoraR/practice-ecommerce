@@ -45,7 +45,7 @@ export const validateSquema = (schema, typeReqData) => {
           return acc
         }, [])
 
-        return res.status(400).send({ error: 'Invalid request', details: formatedErrors })
+        return res.status(400).send({ status: 400, message: 'Invalid request', details: formatedErrors })
       }
 
       next()

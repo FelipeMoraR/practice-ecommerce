@@ -30,9 +30,9 @@
     --color-black-darkest: #000000;
 
     /* Grey (#2C2C2E) */
-    --color-grey-lightest: #F0F0F0;
-    --color-grey-lighter: #B0B0B0;
-    --color-grey: #2C2C2E;
-    --color-grey-darker: #1F1F1F;
-    --color-grey-darkest: #121212;
+    --color-gray-lightest: #F0F0F0;
+    --color-gray-lighter: #B0B0B0;
+    --color-gray: #2C2C2E;
+    --color-gray-darker: #1F1F1F;
+    --color-gray-darkest: #121212;
 }

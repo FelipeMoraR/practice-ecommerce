@@ -148,7 +148,7 @@ export const loginUserController = async (req, res) => {
         sameSite: 'strict',
         maxAge: 1000 * 60 * 60 * 24 * 7 // 7 days
       })
-      .send({ status: 200, message: 'User logged!!!', user: { id: result.user.id, userFullName: `${result.user.name} ${result.user.lastName}` } })
+      .send({ status: 200, message: 'User logged!!!', user: { id: result.user.id, userFullName: `${result.user.name} ${result.user.lastName}`, typeUser: result.user.fk_id_type_user } })
   } catch (error) {
     console.log('loginUserController::: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
@@ -495,7 +495,7 @@ export const changePasswordController = async (req, res) => {
 // NOTE User data, Tested
 export const viewUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
-
+  console.log('called viewUserController')
   try {
     const user = await sqDb.transaction(async () => {
       const { id } = req.userSession
@@ -516,7 +516,7 @@ export const viewUserController = async (req, res) => {
       return userInfoParsed
     })
 
-    return res.status(200).send({ status: 200, data: user })
+    return res.status(200).send({ status: 200, user })
   } catch (error) {
     console.log('viewUserController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })

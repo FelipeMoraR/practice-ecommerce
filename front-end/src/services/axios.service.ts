@@ -10,6 +10,12 @@ const setupLoggedInterceptors = (axiosInstance: AxiosInstance) => {
         (response) => response,
         async (error) => {
             const originalRequest = error.config;
+        
+            // NOTE Avoit infinite loop
+            if(error.retry) return Promise.reject(error);
+
+            error.retry = true;
+           
             if (error.response?.status === 401) {
                 console.log('Unauth token, drinking water....');
 
