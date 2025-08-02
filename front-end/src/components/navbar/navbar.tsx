@@ -49,9 +49,9 @@ const Navbar = ({ imgRoute, pages }: INavbar) => {
                             <Button typeBtn = "button" typeStyleBtn = 'primary-neutral' iconBtn = {Bars3Icon} onClickBtn = {handlerShowNavbar} />
                         </div>
                     </nav>
-                    <div className={`fixed z-40 bg-black opacity-70 size-full ${showNavMobile ? 'block' : 'hidden'}`}>
-                        
-                    </div>
+
+                    <div className={`fixed z-40 bg-black opacity-70 size-full ${showNavMobile ? 'block' : 'hidden'}`} onClick = {handlerShowNavbar}></div>
+
                     <aside className = {`fixed z-50 transform ${showNavMobile ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'} transition-all duration-300 right-0 top-0 h-full p-3 pt-15 bg-gray-lighter border-4 flex flex-col gap-6`}>
                         <div className='absolute w-[40px] -left-8 top-2'>
                             <Button typeBtn = "button" typeStyleBtn = 'primary-neutral' iconBtn = {XMarkIcon} onClickBtn = {handlerShowNavbar}/>
