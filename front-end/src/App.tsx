@@ -11,7 +11,7 @@ function App() {
   const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
 
   if (isLoadingValidationSession) {
-    return <Loader text = "Validating sesion..."/>
+    return <Loader text = "Validating sesion"/>
   }
 
   let pages: IPageNavbarFather[] = [

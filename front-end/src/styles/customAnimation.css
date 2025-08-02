@@ -1,0 +1,80 @@
+
+@keyframes bounceAnimation {
+    0% {
+        transform: none;
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+    
+    30% {
+        transform: translateY(-50%);
+        animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+    }
+
+    50% {
+        transform: none;
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+
+    100% {
+        transform: none;
+        animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+    }
+}
+
+.bounce {
+    animation: bounceAnimation 2s infinite normal;
+}
+
+@keyframes hardBreathingAnimation {
+    0% {
+        opacity: 0%;
+    }
+    100% {
+        opacity: 100%;
+    }
+}
+
+.hard-breathing {
+    animation: hardBreathingAnimation 1s infinite forwards;
+}
+
+.delay-c-100 {
+    animation-delay: 100ms;
+}
+
+.delay-c-200 {
+    animation-delay: 200ms;
+}
+
+.delay-c-300 {
+    animation-delay: 300ms;
+}
+
+.delay-c-400 {
+    animation-delay: 400ms;
+}
+
+.delay-c-500 {
+    animation-delay: 500ms;
+}
+
+.delay-c-600 {
+    animation-delay: 600ms;
+}
+
+.delay-c-700 {
+    animation-delay: 700ms;
+}
+
+.delay-c-800 {
+    animation-delay: 800ms;
+}
+
+.delay-c-900 {
+    animation-delay: 900ms;
+}
+
+.delay-c-1200 {
+    animation-delay: 1200ms;
+}
+
