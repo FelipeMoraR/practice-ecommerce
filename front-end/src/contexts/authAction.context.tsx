@@ -1,13 +1,22 @@
-import { createContext, ReactNode, useContext, useState } from "react";
+import { createContext, ReactNode, useContext } from "react";
 import { FormLoginValues } from "../models/schemas/index.ts";
-import { AxiosError } from "axios";
 import { UseAxiosContext } from "./axios.context.tsx";
 import { UseAuthValidateSessionContext } from "./authValidation.context.tsx";
+import { IUserProps } from "../models/types/user.model.ts";
+import useApi from "../hooks/useApi.ts";
 
 interface IAuthActionContext {
     fetchLoginUser: (data: FormLoginValues) => void;
     isLoadingLogin: boolean;
     errorLogin: string | null; 
+}
+
+
+
+interface IResponseLogin {
+    status: number;
+    message: string;
+    user: IUserProps | null;
 }
 
 const AuthActionContext = createContext<IAuthActionContext | undefined>(undefined);
@@ -23,43 +32,30 @@ export const UseAuthActionContext = () => {
 }
 
 // TODO set the id device in localstorage
-
-export const AuthActionContextProvider = ({ children }: {children: ReactNode}) => {
-    const [ isLoadingLogin, setIsLoadingLogin ] = useState<boolean>(false);
-    const [ errorLogin, setErrorLogin ] = useState<string | null>(null);
-    
+// FIXME using useApi to this, please view me
+export const AuthActionContextProvider = ({ children }: {children: ReactNode}) => {    
     const { api } = UseAxiosContext();
     const { setUserIsLoged, setUserData, userIsLoged } = UseAuthValidateSessionContext();
+    const { apiIsLoading: isLoadingLogin, errorApi: errorLogin, setErrorApi, callApi } = useApi<IResponseLogin, FormLoginValues>((data) => api.post("/users/login", data), false);
 
     const fetchLoginUser: (data: FormLoginValues) => void = async (data) => {
         if(userIsLoged) {
-            setErrorLogin('You already are logged, logout to use login');
+            // NOTE Border case
+            setErrorApi('You already are logged, logout to use login');
             return;
         }
-        try {
-            setIsLoadingLogin(true);
-            setErrorLogin(null);
-            const response = await api.post("/users/login", data);
-            
-            if (response.status !== 200) throw new Error('FetchLoginUser wasnt successfull');
-
-            setUserIsLoged(true);
-            setUserData(response.data.user);
-        } catch (error) {
+       
+        const response = await callApi(data);
+        if (!response) {
             setUserIsLoged(false);
             setUserData(null);
-            if (error instanceof AxiosError) {
-                console.error("Error in fetchLoginUser::: ", error.response);
-                setErrorLogin(error.response?.data.status === 400 ? 'Invalid email or password' : error.response?.data.message);
-
-                return;
-            }
-        
-            console.error("Unexpected error: ", error);
-            setErrorLogin('Something went wrong, please try again later');
-        } finally {
-            setIsLoadingLogin(false);
+            return;
         }
+
+        setUserIsLoged(true);
+        setUserData(response.data.user);
+        
+        return;
     };
 
     return (

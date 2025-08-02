@@ -1,19 +1,15 @@
 import { createContext, Dispatch, ReactNode, SetStateAction, useContext, useEffect, useState } from "react";
 import { AxiosError } from "axios";
 import { createCustomAxios } from "../services/axios.service.ts";
+import { IUserProps } from "../models/types/user.model.ts";
 
-// TODO this is temporal because user it will have more info
-interface UserProps {
-    id: string;
-    userFullName: string;
-}
 
 interface IAuthValidationSessionContextProps {
     userIsLoged: boolean;
     isLoadingValidationSession: boolean;
     errorValidationSession: string | null;
-    userData: UserProps | null;
-    setUserData: Dispatch<SetStateAction<UserProps | null>>;
+    userData: IUserProps | null;
+    setUserData: Dispatch<SetStateAction<IUserProps | null>>;
     setUserIsLoged: Dispatch<SetStateAction<boolean>>;
 }
 
@@ -31,7 +27,7 @@ export const UseAuthValidateSessionContext = () => {
 
 export const AuthValidateSessionContextProvider = ({ children }: { children: ReactNode }) => {
   const [ userIsLoged, setUserIsLoged ] = useState<boolean>(false);
-  const [ userData, setUserData ] = useState<UserProps | null>(null);
+  const [ userData, setUserData ] = useState<IUserProps | null>(null);
   const [ isLoadingValidationSession, setIsLoadingValidationSession ] = useState<boolean>(true);
   const [ errorValidationSession, setErrorValidationSession ] = useState<string | null>(null);
   
