@@ -4,14 +4,18 @@ import { UseAxiosContext } from "./axios.context.tsx";
 import { UseAuthValidateSessionContext } from "./authValidation.context.tsx";
 import { IUserProps } from "../models/types/user.model.ts";
 import useApi from "../hooks/useApi.ts";
+import { AxiosResponse } from "axios";
 
 interface IAuthActionContext {
     fetchLoginUser: (data: FormLoginValues) => void;
     isLoadingLogin: boolean;
     errorLogin: string | null; 
+    fetchLogoutUser: () => void;
+    isLoadingLogout: boolean;
+    errorLogout: string | null; 
+    responseLogout: AxiosResponse<unknown, unknown> | null;
+    setErrorLogout: React.Dispatch<React.SetStateAction<string | null>>
 }
-
-
 
 interface IResponseLogin {
     status: number;
@@ -32,11 +36,11 @@ export const UseAuthActionContext = () => {
 }
 
 // TODO set the id device in localstorage
-// FIXME using useApi to this, please view me
 export const AuthActionContextProvider = ({ children }: {children: ReactNode}) => {    
     const { api } = UseAxiosContext();
     const { setUserIsLoged, setUserData, userIsLoged } = UseAuthValidateSessionContext();
     const { apiIsLoading: isLoadingLogin, errorApi: errorLogin, setErrorApi, callApi } = useApi<IResponseLogin, FormLoginValues>((data) => api.post("/users/login", data), false);
+    const { apiIsLoading: isLoadingLogout, callApi: callLogout, errorApi: errorLogout, responseApi: responseLogout, setErrorApi: setErrorLogout } = useApi(() => api.post('/users/logout'));
 
     const fetchLoginUser: (data: FormLoginValues) => void = async (data) => {
         if(userIsLoged) {
@@ -58,8 +62,25 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
         return;
     };
 
+    const fetchLogoutUser: () => void = async () => {
+        if(!userIsLoged) {
+            setErrorLogout('User must be logged to logout');
+            return;
+        }
+
+        const response = await callLogout();
+        if(!response) {
+            setErrorLogout('Unexpected error, please try again');
+            return;
+        }
+
+        setErrorLogout(null);
+        setUserIsLoged(false);
+        setUserData(null);
+    }
+
     return (
-        <AuthActionContext.Provider value = {{ fetchLoginUser, isLoadingLogin, errorLogin }}>
+        <AuthActionContext.Provider value = {{ fetchLoginUser, isLoadingLogin, errorLogin, fetchLogoutUser, isLoadingLogout, errorLogout, responseLogout, setErrorLogout }}>
             {children}
         </AuthActionContext.Provider>
     )

@@ -3,16 +3,15 @@ import { INavbarContent } from "../../models/types";
 import { ChevronDownIcon, UserIcon } from '@heroicons/react/24/solid'
 import Button from "../button/button";
 import { Link, useNavigate } from "react-router";
+import { UseAuthActionContext } from '../../contexts/authAction.context';
 
 const NavBarContent = ({ imgRoute, pages, elementClicked, handlerNavbarSlidersClick }: INavbarContent) => {
     const { userIsLoged } = UseAuthValidateSessionContext();
-    
+    const { fetchLogoutUser } = UseAuthActionContext();
+
     const navigate = useNavigate();
-
-    
-
     return (
-        <>
+        <>  
             <div className = 'w-20 h-full hidden xl:block pb-2'>
                 <img src = {imgRoute} alt="logoNavbar" className='size-full object-contain border-4 border-black ' />
             </div>
@@ -51,7 +50,7 @@ const NavBarContent = ({ imgRoute, pages, elementClicked, handlerNavbarSlidersCl
                     </div>
                     
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = "button" typeStyleBtn = 'primary-red' textBtn = 'Logout'  onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = "button" typeStyleBtn = 'primary-red' textBtn = 'Logout'  onClickBtn = {fetchLogoutUser} />
                     </div>                    
                 </div>
             ) : (

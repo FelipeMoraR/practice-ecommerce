@@ -201,7 +201,7 @@ export const registerUserController = async (req, res) => {
   }
 }
 
-// ANCHOR This return a 401 be carefull, Tested
+// NOTE Tested
 export const logoutUserController = async (req, res) => {
   const ip = req.headers['CF-Connecting-IP'] || req.socket.remoteAdrress || req.ip || null
 

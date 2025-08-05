@@ -1,0 +1,28 @@
+import { ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { XMarkIcon } from "@heroicons/react/24/solid";
+
+interface IModal {
+    header: ReactNode;
+    body: ReactNode;
+    isOpen: boolean;
+    hideModal: () => void;
+}
+
+//TODO what mean the last ! in getElementById
+const Modal = ({ header, body, isOpen, hideModal }: IModal) => {
+    if(!isOpen) return null;
+
+    return createPortal(
+    <>
+        <div className="fixed z-20 bg-black opacity-70 size-full top-0" onClick={hideModal}></div>
+        <div className="fixed z-30 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-gray-lightest flex flex-col gap-3 size-50  justify-center p-2 outline-4 outline-black-darkest border-t-4 border-l-4 border-gray-lighter">
+            <XMarkIcon onClick={hideModal} className="w-5 h-5"/>
+            {header}
+            {body}  
+        </div> 
+    </>, 
+    document.getElementById('modal-root')!)
+}
+
+export default Modal;

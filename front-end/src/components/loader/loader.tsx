@@ -10,7 +10,7 @@ const Loader = ({ text, isFullScreen = true }: ILoader) => {
                 <div className="fixed z-20 bg-black opacity-70 size-full"></div>
             }
             
-            <div className="fixed z-30 bg-gray-lightest left-1/2 top-1/2 flex flex-col gap-3 size-50 -translate-x-1/2 -translate-y-1/2 justify-center p-2 outline-4 outline-black-darkest border-t-4 border-l-4 border-gray-lighter">
+            <div className={`${isFullScreen ? 'fixed z-30 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2': '' } bg-gray-lightest flex flex-col gap-3 size-50  justify-center p-2 outline-4 outline-black-darkest border-t-4 border-l-4 border-gray-lighter`}>
                 <div className="flex justify-between p-3">
                     <div className="size-6 bg-red bounce"></div>
                     <div className="size-6 bg-yellow bounce delay-c-100"></div>
