@@ -9,100 +9,104 @@ import Loader from "./components/loader/loader";
 import Register from "./pages/public/register.page";
 
 function App() {
-  const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
+    const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
 
-  if (isLoadingValidationSession) {
-    return <Loader text = "Validating sesion"/>
-  }
+    if (isLoadingValidationSession) {
+        return <Loader text = "Validating sesion"/>
+    }
 
-  let pages: IPageNavbarFather[] = [
-        {
-            anchor: '/',
-            text: 'Home',
-            subPages: null
-        },
-        {
-            anchor: 'Products',
-            text: 'Products',
-            subPages: [
-                {
-                    anchor: 'Shirts',
-                    text: 'Shirts'
-                },
-                {
-                    anchor: 'Pants',
-                    text: 'Pants'
-                }
-            ]
-        },
-        {
-            anchor: 'Contact',
-            text: 'Contact',
-            subPages: [
-                {
-                    anchor: 'contact1',
-                    text: 'contact1'
-                },
-                {
-                    anchor: 'contact2',
-                    text: 'contact2'
-                },
-                {
-                    anchor: 'contact3',
-                    text: 'contact3'
-                }
-            ]
-        },
-        {
-            anchor: 'Contact',
-            text: 'Contact',
-            subPages: [
-                {
-                    anchor: 'contact1',
-                    text: 'contact1'
-                },
-                {
-                    anchor: 'contact2',
-                    text: 'contact2'
-                },
-                {
-                    anchor: 'contact3',
-                    text: 'contact3'
-                }
-            ]
-        }
-  ]
+    let pages: IPageNavbarFather[] = [
+            {
+                anchor: '/',
+                text: 'Home',
+                subPages: null
+            },
+            {
+                anchor: 'Products',
+                text: 'Products',
+                subPages: [
+                    {
+                        anchor: 'Shirts',
+                        text: 'Shirts'
+                    },
+                    {
+                        anchor: 'Pants',
+                        text: 'Pants'
+                    }
+                ]
+            },
+            {
+                anchor: 'Contact',
+                text: 'Contact',
+                subPages: [
+                    {
+                        anchor: 'contact1',
+                        text: 'contact1'
+                    },
+                    {
+                        anchor: 'contact2',
+                        text: 'contact2'
+                    },
+                    {
+                        anchor: 'contact3',
+                        text: 'contact3'
+                    }
+                ]
+            },
+            {
+                anchor: 'Contact',
+                text: 'Contact',
+                subPages: [
+                    {
+                        anchor: 'contact1',
+                        text: 'contact1'
+                    },
+                    {
+                        anchor: 'contact2',
+                        text: 'contact2'
+                    },
+                    {
+                        anchor: 'contact3',
+                        text: 'contact3'
+                    }
+                ]
+            }
+    ]
 
-  if (userIsLoged) {
-    pages = [...pages, {
-            anchor: '/profile',
-            text: 'profile',
-            subPages: [
-                {
-                    anchor: 'profile1',
-                    text: 'profile1'
-                },
-                {
-                    anchor: 'profile2',
-                    text: 'profile2'
-                },
-                {
-                    anchor: 'profile3',
-                    text: 'profile3'
-                }
-            ]
-        }]
-  }
-  
-  return (
-    <Routes>
-      <Route path = '/' element = {<PageLayout children = {<Home/>} pages = {pages} />} />
-      <Route path = '/login' element = {<PageLayout children = {<LoginPage/>} pages = {pages} />} />
-      <Route path = '/register' element = {<PageLayout children = {<Register/>} pages = {pages} />} />
+    if (userIsLoged) {
+        pages = [...pages, {
+                anchor: '/profile',
+                text: 'profile',
+                subPages: [
+                    {
+                        anchor: 'profile1',
+                        text: 'profile1'
+                    },
+                    {
+                        anchor: 'profile2',
+                        text: 'profile2'
+                    },
+                    {
+                        anchor: 'profile3',
+                        text: 'profile3'
+                    }
+                ]
+            }]
+    }
+    
+    return (
+        <Routes>
+            <Route element = {<PageLayout pages = {pages}/>}> 
+                <Route index element = { <Home/> } />
+                <Route path = 'login' element =  { <LoginPage/> } />
+                <Route path = 'register' element = { <Register/> } />
 
-      <Route path = '/profile' element = {<PrivateRoute children = {<PageLayout children = {<h1> profile </h1>} pages = {pages} />} />} ></Route>
-    </Routes>
-  )
+                <Route element = {<PrivateRoute />}>
+                    <Route path = 'profile' element =  { <h1>Profile</h1> } />
+                </Route>
+            </Route>
+        </Routes>
+    )
 }
 
 export default App

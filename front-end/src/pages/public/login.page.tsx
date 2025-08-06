@@ -4,12 +4,17 @@ import Loader from "../../components/loader/loader";
 import Form from "../../components/form/form";
 import Text from "../../components/text/text";
 import { UseAuthValidateSessionContext } from "../../contexts/authValidation.context";
+import { useNavigate } from "react-router-dom";
 
 const LoginPage = () => {
     const { fetchLoginUser, isLoadingLogin, errorLogin } = UseAuthActionContext();
     const { deviceId } = UseAuthValidateSessionContext();
-
-    const onSubmit = (data: FormLoginValues) => fetchLoginUser(data);
+    const navigate = useNavigate();
+    
+    const onSubmit = async (data: FormLoginValues) => {
+        await fetchLoginUser(data);
+        navigate('/profile');
+    }
 
     return (
         <>

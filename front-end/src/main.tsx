@@ -11,13 +11,13 @@ import App from './App.tsx'
 
 
 createRoot(document.getElementById('root')!).render(
-    <BrowserRouter>
       <AuthValidateSessionContextProvider>
         <AxiosContextProvider>
           <AuthActionContextProvider>
-            <App/>
+            <BrowserRouter>
+              <App/>
+            </BrowserRouter>
           </AuthActionContextProvider>
         </AxiosContextProvider>
       </AuthValidateSessionContextProvider>
-    </BrowserRouter>
 )

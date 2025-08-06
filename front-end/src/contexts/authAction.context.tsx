@@ -5,14 +5,13 @@ import { UseAuthValidateSessionContext } from "./authValidation.context.tsx";
 import { IUserProps } from "../models/types/user.model.ts";
 import useApi from "../hooks/useApi.ts";
 import { AxiosResponse } from "axios";
-import { useNavigate } from "react-router-dom";
-import { flushSync } from "react-dom";
 
 interface IAuthActionContext {
-    fetchLoginUser: (data: FormLoginValues) => void;
+    fetchLoginUser: (data: FormLoginValues) => Promise<void>;
     isLoadingLogin: boolean;
     errorLogin: string | null; 
-    fetchLogoutUser: () => void;
+    fetchLogoutUser: () => Promise<void>; // NOTE Async functions always return implicit a promise
+    // fetchLogoutUser: () => void;
     isLoadingLogout: boolean;
     errorLogout: string | null; 
     responseLogout: AxiosResponse<unknown, unknown> | null;
@@ -37,16 +36,13 @@ export const UseAuthActionContext = () => {
     return context;
 }
 
-// TODO set the id device in localstorage
 export const AuthActionContextProvider = ({ children }: {children: ReactNode}) => {    
-    console.log('AuthActionContextProvider')
     const { api } = UseAxiosContext();
-    const navigate = useNavigate();
     const { setUserIsLoged, setUserData, userIsLoged } = UseAuthValidateSessionContext();
     const { apiIsLoading: isLoadingLogin, errorApi: errorLogin, setErrorApi, callApi } = useApi<IResponseLogin, FormLoginValues>((data) => api.post("/users/login", data), false);
     const { apiIsLoading: isLoadingLogout, callApi: callLogout, errorApi: errorLogout, responseApi: responseLogout, setErrorApi: setErrorLogout } = useApi(() => api.post('/users/logout'));
 
-    const fetchLoginUser: (data: FormLoginValues) => void = async (data) => {
+    const fetchLoginUser: (data: FormLoginValues) => Promise<void> = async (data) => {
         if(userIsLoged) {
             // NOTE Border case
             setErrorApi('You already are logged, logout to use login');
@@ -54,22 +50,22 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
         }
        
         const response = await callApi(data);
+
         if (!response) {
             setUserIsLoged(false);
             setUserData(null);
             return;
         }
 
-        // NOTE EXPLAIN THIS, help with the batching
-        flushSync(() => {
-            setUserIsLoged(true);
-            setUserData(response.data.user);
-        });
-        navigate('/profile');
+     
+        setUserIsLoged(true);
+        setUserData(response.data.user);
+        
+        
         return;
     };
 
-    const fetchLogoutUser: () => void = async () => {
+    const fetchLogoutUser: () => Promise<void> = async () => {
         if(!userIsLoged) {
             setErrorLogout('User must be logged to logout');
             return;
@@ -82,13 +78,12 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
             return;
         }
         
-        flushSync(() => {
-            setErrorLogout(null);
-            setUserIsLoged(false);
-            setUserData(null);
-        });
         
-        navigate('/');
+        setErrorLogout(null);
+        setUserIsLoged(false);
+        setUserData(null);
+       
+        
         return;
     }
 
