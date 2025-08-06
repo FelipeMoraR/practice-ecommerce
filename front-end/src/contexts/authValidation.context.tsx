@@ -3,7 +3,6 @@ import { AxiosError } from "axios";
 import { createCustomAxios } from "../services/axios.service.ts";
 import { IUserProps } from "../models/types/user.model.ts";
 
-
 interface IAuthValidationSessionContextProps {
     deviceId: string;
     userIsLoged: boolean;
@@ -29,14 +28,15 @@ export const UseAuthValidateSessionContext = () => {
 export const AuthValidateSessionContextProvider = ({ children }: { children: ReactNode }) => {
   const [ userIsLoged, setUserIsLoged ] = useState<boolean>(false);
   const [ userData, setUserData ] = useState<IUserProps | null>(null);
-  const [ isLoadingValidationSession, setIsLoadingValidationSession ] = useState<boolean>(true);
+  const [ isLoadingValidationSession, setIsLoadingValidationSession ] = useState<boolean>(!window.location.pathname.startsWith('/validation'));
   const [ errorValidationSession, setErrorValidationSession ] = useState<string | null>(null);
 
   if(!localStorage.getItem('deviceId')) localStorage.setItem('deviceId', crypto.randomUUID());
 
   const deviceId = localStorage.getItem('deviceId')!; // NOTE with this ! you are saying to ts that this values it always be something, never null
- 
+  
   useEffect(() => {
+    const pathPage: boolean = window.location.pathname.startsWith('/validation');
     const api = createCustomAxios(import.meta.env.VITE_ENDPOINT_BACKEND);
 
     const fetchValidateSession = async () => {
@@ -74,8 +74,7 @@ export const AuthValidateSessionContextProvider = ({ children }: { children: Rea
           setIsLoadingValidationSession(false);
       }
     } 
-
-    fetchValidateSession();
+    if(!pathPage) fetchValidateSession();
   }, []);
 
   return (

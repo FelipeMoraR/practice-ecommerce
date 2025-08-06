@@ -51,7 +51,7 @@ const NavBarContentDesktop = ({ imgRoute, pages }: INavbar) => {
             { userIsLoged ? (
                 <div className = 'flex gap-3 flex-row lg:items-center'>
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = "button" typeStyleBtn = 'secondary-yellow' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/profile')} />
+                        <Button typeBtn = "button" typeStyleBtn = 'secondary-yellow' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('profile')} />
                     </div>
                     
                     <div className = 'h-[40px]'>

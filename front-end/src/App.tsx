@@ -7,10 +7,10 @@ import { UseAuthValidateSessionContext } from "./contexts/authValidation.context
 import LoginPage from "./pages/public/login.page";
 import Loader from "./components/loader/loader";
 import Register from "./pages/public/register.page";
+import VerifyEmail from "./pages/public/verifyEmail.page";
 
 function App() {
     const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
-    console.log('render ')
     if (isLoadingValidationSession) {
         return <Loader text = "Validating sesion"/>
     }
@@ -75,7 +75,7 @@ function App() {
 
     if (userIsLoged) {
         pages = [...pages, {
-                anchor: '/profile',
+                anchor: 'profile',
                 text: 'profile',
                 subPages: [
                     {
@@ -105,6 +105,8 @@ function App() {
                     <Route path = 'profile' element =  { <h1>Profile</h1> } />
                 </Route>
             </Route>
+
+            <Route path = '/validation/verifying-email' element = { <VerifyEmail/> } />
         </Routes>
     )
 }

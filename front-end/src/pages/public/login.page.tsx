@@ -3,21 +3,34 @@ import { FormLoginValues, loginSchema } from "../../models/schemas";
 import Loader from "../../components/loader/loader";
 import Form from "../../components/form/form";
 import Text from "../../components/text/text";
+import Modal from "../../components/modal/modal";
+import useModal from "../../hooks/useModal";
 import { UseAuthValidateSessionContext } from "../../contexts/authValidation.context";
-import { useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
+import { useEffect } from "react";
 
 const LoginPage = () => {
     const { fetchLoginUser, isLoadingLogin, errorLogin } = UseAuthActionContext();
     const { deviceId } = UseAuthValidateSessionContext();
-    const navigate = useNavigate();
+    const { showModal, hideModal, modalIsOpen } = useModal();
+    const location = useLocation();
     
-    const onSubmit = async (data: FormLoginValues) => {
-        await fetchLoginUser(data);
-        navigate('/profile');
-    }
+    const onSubmit = async (data: FormLoginValues) => fetchLoginUser(data);
+    
+    useEffect(() => {
+        if(location.state && location.state.error) showModal('verifyAccountModalError');
+        if(location.state && location.state.data) showModal('verifyAccountModalResult');
+    }, [location.state, showModal]);
 
     return (
         <>
+            {location.state && location.state.error && (
+                <Modal header={<Text text='Verify account' color="black" size="3xl" typeText="strong"/>} body={<Text text={`Error verifying account: ${location.state.error}`} color="black" size="base" typeText="p"/>} hideModal={hideModal} isOpen={modalIsOpen('verifyAccountModalError')} />
+            )}
+            {location.state && location.state.data && location.state.data.message && (
+                <Modal header={<Text text='Verify account' color="black" size="3xl" typeText="strong"/>} body={<Text text={`Result verifying account: ${location.state.data.message}`} color="black" size="base" typeText="p"/>} hideModal={hideModal} isOpen={modalIsOpen('verifyAccountModalResult')} />
+            )}
+            
             {isLoadingLogin && <Loader text="loading" />}
 
             <section className="mx-auto my-6 flex flex-col p-4">

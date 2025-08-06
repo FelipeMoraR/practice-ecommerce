@@ -60,7 +60,7 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
         }
        
         const response = await callApi(data);
-
+        
         if (!response) {
             setUserIsLoged(false);
             setUserData(null);

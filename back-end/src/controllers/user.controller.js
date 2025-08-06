@@ -80,7 +80,8 @@ export const loginUserController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
+        const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
+        console.log('lol =>', endpointWithOutToken)
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
@@ -125,8 +126,8 @@ export const loginUserController = async (req, res) => {
       return { accessToken, refreshToken, deviceId: deviceIdReceived, isVerified: user.isVerified, user }
     })
 
-    if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Email has to be verified but an email was already sended. Wait a while...' })
-    if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be email verified' })
+    if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Account has to be verified but an email was already sended. Check your email.' })
+    if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be verified, we sended an email to verify your account.' })
 
     await saveLogController('AUDIT', 'User loged successfull', email, ip)
 
@@ -181,7 +182,7 @@ export const registerUserController = async (req, res) => {
 
       // NOTE Generate token, endpoint and sending email
       // NOTE This will be controlled in the front, we extract the token as a param and validate with the confirmEmailVerificationController
-      const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
+      const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m', 'Verify email')
       await saveLogController('AUDIT', 'verification email Sended', email, ip)
     })
@@ -312,7 +313,7 @@ export const sendEmailVerificationController = async (req, res) => {
       }
 
       // NOTE Sending email
-      const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
+      const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
       await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { email } })
@@ -360,7 +361,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
+        const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Forgot password')
 
         await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: user.id } })
@@ -408,7 +409,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email
       // TODO This has to be send to the update password form
-      const endpoint = process.env.CORS_ORIGIN + '/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
+      const endpoint = process.env.CORS_ORIGIN + '/validation/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
       await sendEmail(user.email, endpoint, user.name, user.lastName, 'Forgot password')
 
       await User.update({ lastForgotPasswordSentAt: now, updateAt: now }, { where: { id: user.id } })
@@ -887,7 +888,7 @@ export const getAllClientsController = async (req, res) => {
       const { count, rows } = await User.findAndCountAll(config)
       return { count, rows }
     })
-    if (resultUser.rows.length <= 0) return res.status(200).send({ status: 200, data: [], count: 0, size: Number(size), page: Number(page), total: resultUser.count })
+    if (resultUser.rows.length <= 0) return res.status(200).send({ status: 200, message: 'Nothing to show', data: [], count: 0, size: Number(size), page: Number(page), total: resultUser.count })
 
     const dataParsed = resultUser.rows.map(el => {
       const newUserToSave = { id: el.id, email: el.email, name: el.name, lastname: el.lastName, phone: el.phone, isVerified: el.isVerified, addresses: [] }
@@ -902,7 +903,7 @@ export const getAllClientsController = async (req, res) => {
       return newUserToSave
     })
     await saveLogController('INFO', 'Admin could see the clients', adminEmail, ip)
-    return res.status(200).send({ status: 200, data: dataParsed, count: resultUser.rows.length, size: Number(size), page: Number(page), total: resultUser.count })
+    return res.status(200).send({ status: 200, message: 'Users found', data: dataParsed, count: resultUser.rows.length, size: Number(size), page: Number(page), total: resultUser.count })
   } catch (error) {
     console.log('getAllClientsController: ', error)
     if (error.parent.errno === 1054) {
@@ -933,7 +934,7 @@ export const createClientController = async (req, res) => {
 
       // NOTE Generate token, endpoint and sending email
       // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
-      const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
+      const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m', 'Verify email')
       await saveLogController('INFO', 'Admin was able to created a new client', adminEmail, ip)
     })
