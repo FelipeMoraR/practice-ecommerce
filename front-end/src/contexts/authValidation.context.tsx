@@ -5,6 +5,7 @@ import { IUserProps } from "../models/types/user.model.ts";
 
 
 interface IAuthValidationSessionContextProps {
+    deviceId: string;
     userIsLoged: boolean;
     isLoadingValidationSession: boolean;
     errorValidationSession: string | null;
@@ -30,7 +31,11 @@ export const AuthValidateSessionContextProvider = ({ children }: { children: Rea
   const [ userData, setUserData ] = useState<IUserProps | null>(null);
   const [ isLoadingValidationSession, setIsLoadingValidationSession ] = useState<boolean>(true);
   const [ errorValidationSession, setErrorValidationSession ] = useState<string | null>(null);
-  
+
+  if(!localStorage.getItem('deviceId')) localStorage.setItem('deviceId', crypto.randomUUID());
+
+  const deviceId = localStorage.getItem('deviceId')!; // NOTE with this ! you are saying to ts that this values it always be something, never null
+ 
   useEffect(() => {
     const api = createCustomAxios(import.meta.env.VITE_ENDPOINT_BACKEND);
 
@@ -75,7 +80,7 @@ export const AuthValidateSessionContextProvider = ({ children }: { children: Rea
 
   return (
     <AuthValidateSessionContext.Provider
-      value={{ userIsLoged, isLoadingValidationSession, errorValidationSession, userData, setUserData, setUserIsLoged}}
+      value={{ userIsLoged, isLoadingValidationSession, errorValidationSession, userData, setUserData, setUserIsLoged, deviceId }}
     >
       {children}
     </AuthValidateSessionContext.Provider>

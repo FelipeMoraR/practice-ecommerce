@@ -25,7 +25,7 @@
     animation: bounceAnimation 2s infinite normal;
 }
 
-@keyframes hardBreathingAnimation {
+@keyframes fadeIn {
     0% {
         opacity: 0%;
     }
@@ -35,7 +35,11 @@
 }
 
 .hard-breathing {
-    animation: hardBreathingAnimation 1s infinite forwards;
+    animation: fadeIn 1s infinite forwards;
+}
+
+.fade-in {
+    animation: fadeIn 500ms linear forwards;
 }
 
 .delay-c-100 {

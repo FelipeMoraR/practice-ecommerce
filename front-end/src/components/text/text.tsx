@@ -1,5 +1,5 @@
 type TypeText = 'p' | 'strong' | 'em' | 'mark' | 'a' | 'h1' | 'h2' | 'h3' | 'h4' | 'h5' | 'h6';
-type Color = 'white' | 'black' | 'gray' | 'red' | 'red-darkest' | 'green' | 'yellow';
+type Color = 'white' | 'black' | 'gray' | 'red' | 'red-lighter' | 'red-darkest' | 'green' | 'yellow';
 type Size = 'xs' | 'sm' | 'base' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl'
 
 interface IText {
@@ -15,6 +15,7 @@ const colorClasses: Record<Color, string> = {
   gray: 'text-gray',
   red: 'text-red',
   "red-darkest": 'text-red-darkest',
+  "red-lighter": 'text-red-lighter',
   green: 'text-green',
   yellow: 'text-yellow',
 };

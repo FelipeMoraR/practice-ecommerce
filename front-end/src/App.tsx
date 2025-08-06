@@ -6,6 +6,7 @@ import { IPageNavbarFather } from "./models/types/navbar.model"
 import { UseAuthValidateSessionContext } from "./contexts/authValidation.context"
 import LoginPage from "./pages/public/login.page";
 import Loader from "./components/loader/loader";
+import Register from "./pages/public/register.page";
 
 function App() {
   const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
@@ -97,7 +98,7 @@ function App() {
     <Routes>
       <Route path = '/' element = {<PageLayout children = {<Home/>} pages = {pages} />} />
       <Route path = '/login' element = {<PageLayout children = {<LoginPage/>} pages = {pages} />} />
-      <Route path = '/register' element = {<PageLayout children = {<h1> register </h1>} pages = {pages} />} />
+      <Route path = '/register' element = {<PageLayout children = {<Register/>} pages = {pages} />} />
 
       <Route path = '/profile' element = {<PrivateRoute children = {<PageLayout children = {<h1> profile </h1>} pages = {pages} />} />} ></Route>
     </Routes>

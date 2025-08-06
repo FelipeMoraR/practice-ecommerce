@@ -8,8 +8,8 @@ import { UseAuthActionContext } from '../../contexts/authAction.context';
 const NavBarContent = ({ imgRoute, pages, elementClicked, handlerNavbarSlidersClick }: INavbarContent) => {
     const { userIsLoged } = UseAuthValidateSessionContext();
     const { fetchLogoutUser } = UseAuthActionContext();
-
     const navigate = useNavigate();
+
     return (
         <>  
             <div className = 'w-20 h-full hidden xl:block pb-2'>
@@ -46,11 +46,11 @@ const NavBarContent = ({ imgRoute, pages, elementClicked, handlerNavbarSlidersCl
             { userIsLoged ? (
                 <div className = 'flex gap-3 flex-row lg:items-center'>
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = "button" typeStyleBtn = 'primary-red' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/register')} />
+                        <Button typeBtn = "button" typeStyleBtn = 'secondary-yellow' textBtn = 'Profile' iconBtn = { UserIcon } onClickBtn = {() => navigate('/profile')} />
                     </div>
                     
                     <div className = 'h-[40px]'>
-                        <Button typeBtn = "button" typeStyleBtn = 'primary-red' textBtn = 'Logout'  onClickBtn = {fetchLogoutUser} />
+                        <Button typeBtn = "button" typeStyleBtn = 'secondary-red' textBtn = 'Logout'  onClickBtn = {fetchLogoutUser} />
                     </div>                    
                 </div>
             ) : (

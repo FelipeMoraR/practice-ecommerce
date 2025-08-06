@@ -5,6 +5,8 @@ import { UseAuthValidateSessionContext } from "./authValidation.context.tsx";
 import { IUserProps } from "../models/types/user.model.ts";
 import useApi from "../hooks/useApi.ts";
 import { AxiosResponse } from "axios";
+import { useNavigate } from "react-router-dom";
+import { flushSync } from "react-dom";
 
 interface IAuthActionContext {
     fetchLoginUser: (data: FormLoginValues) => void;
@@ -37,7 +39,9 @@ export const UseAuthActionContext = () => {
 
 // TODO set the id device in localstorage
 export const AuthActionContextProvider = ({ children }: {children: ReactNode}) => {    
+    console.log('AuthActionContextProvider')
     const { api } = UseAxiosContext();
+    const navigate = useNavigate();
     const { setUserIsLoged, setUserData, userIsLoged } = UseAuthValidateSessionContext();
     const { apiIsLoading: isLoadingLogin, errorApi: errorLogin, setErrorApi, callApi } = useApi<IResponseLogin, FormLoginValues>((data) => api.post("/users/login", data), false);
     const { apiIsLoading: isLoadingLogout, callApi: callLogout, errorApi: errorLogout, responseApi: responseLogout, setErrorApi: setErrorLogout } = useApi(() => api.post('/users/logout'));
@@ -56,9 +60,12 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
             return;
         }
 
-        setUserIsLoged(true);
-        setUserData(response.data.user);
-        
+        // NOTE EXPLAIN THIS, help with the batching
+        flushSync(() => {
+            setUserIsLoged(true);
+            setUserData(response.data.user);
+        });
+        navigate('/profile');
         return;
     };
 
@@ -67,16 +74,22 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
             setErrorLogout('User must be logged to logout');
             return;
         }
-
+        
         const response = await callLogout();
+
         if(!response) {
             setErrorLogout('Unexpected error, please try again');
             return;
         }
-
-        setErrorLogout(null);
-        setUserIsLoged(false);
-        setUserData(null);
+        
+        flushSync(() => {
+            setErrorLogout(null);
+            setUserIsLoged(false);
+            setUserData(null);
+        });
+        
+        navigate('/');
+        return;
     }
 
     return (

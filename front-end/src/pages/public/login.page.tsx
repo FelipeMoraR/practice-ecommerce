@@ -3,11 +3,12 @@ import { FormLoginValues, loginSchema } from "../../models/schemas";
 import Loader from "../../components/loader/loader";
 import Form from "../../components/form/form";
 import Text from "../../components/text/text";
-
+import { UseAuthValidateSessionContext } from "../../contexts/authValidation.context";
 
 const LoginPage = () => {
     const { fetchLoginUser, isLoadingLogin, errorLogin } = UseAuthActionContext();
-    
+    const { deviceId } = UseAuthValidateSessionContext();
+
     const onSubmit = (data: FormLoginValues) => fetchLoginUser(data);
 
     return (
@@ -22,22 +23,23 @@ const LoginPage = () => {
                     styleForm="primary"
                     mode="onBlur"
                     schema={loginSchema}
-                    defaultValues={ {email: '', password: '', deviceId: 1} }
+                    defaultValues={ {email: '', password: '', deviceId} }
                     onSubmit={onSubmit}
                     fields={[
                     {
                         name: 'email',
-                        label: 'Test email',
+                        label: 'Email',
                         type: 'text',
                         placeholder: 'Insert email'
                     },
                     {
                         name: 'password',
-                        label: 'Test password',
+                        label: 'Password',
                         type: 'password',
                         placeholder: 'Insert password'
                     }
                     ]}
+                    gridCols={1}
                     errorSubmit={errorLogin}
                 /> 
             </section>
