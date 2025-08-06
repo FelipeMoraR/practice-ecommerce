@@ -35,7 +35,7 @@ const PageLayout = ({ pages }: IPageLayout) => {
             { <Modal header = {<h1>Logout status</h1>} body = {<p>{errorLogout}</p>} isOpen = {modalIsOpen('logoutModal')} hideModal={handleHideErrorLogout} /> }
 
             <Navbar imgRoute = {logo} pages={pages}/>
-                <Outlet/>
+            <Outlet/>
             <Footer />
         </>
     )

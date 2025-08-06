@@ -1,10 +1,11 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useEffect, useRef } from "react";
 import { FormLoginValues } from "../models/schemas/index.ts";
 import { UseAxiosContext } from "./axios.context.tsx";
 import { UseAuthValidateSessionContext } from "./authValidation.context.tsx";
 import { IUserProps } from "../models/types/user.model.ts";
 import useApi from "../hooks/useApi.ts";
 import { AxiosResponse } from "axios";
+import { useNavigate } from "react-router-dom";
 
 interface IAuthActionContext {
     fetchLoginUser: (data: FormLoginValues) => Promise<void>;
@@ -38,9 +39,18 @@ export const UseAuthActionContext = () => {
 
 export const AuthActionContextProvider = ({ children }: {children: ReactNode}) => {    
     const { api } = UseAxiosContext();
+    const navigate = useNavigate();
     const { setUserIsLoged, setUserData, userIsLoged } = UseAuthValidateSessionContext();
     const { apiIsLoading: isLoadingLogin, errorApi: errorLogin, setErrorApi, callApi } = useApi<IResponseLogin, FormLoginValues>((data) => api.post("/users/login", data), false);
     const { apiIsLoading: isLoadingLogout, callApi: callLogout, errorApi: errorLogout, responseApi: responseLogout, setErrorApi: setErrorLogout } = useApi(() => api.post('/users/logout'));
+    const shouldNavigateAfterLogout = useRef<boolean>(false); // NOTE To solve the race condition problem
+
+    useEffect(() => {
+        if (shouldNavigateAfterLogout.current && !userIsLoged) {
+            shouldNavigateAfterLogout.current = false;
+            navigate('/', { replace: true });
+        }
+    }, [navigate, userIsLoged])
 
     const fetchLoginUser: (data: FormLoginValues) => Promise<void> = async (data) => {
         if(userIsLoged) {
@@ -78,11 +88,11 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
             return;
         }
         
-        
+        shouldNavigateAfterLogout.current = true;
+
         setErrorLogout(null);
         setUserIsLoged(false);
         setUserData(null);
-       
         
         return;
     }

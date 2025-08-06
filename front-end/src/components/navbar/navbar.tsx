@@ -1,6 +1,7 @@
 import { INavbar } from '../../models/types';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/solid'
-import NavBarContent from './navbarContent';
+import NavBarContentDesktop from './navbarContentDesktop';
+import NavbarContentMobile from './navbarContentMobile';
 import Button from '../button/button';
 import { useEffect, useState } from 'react';
 
@@ -37,7 +38,7 @@ const Navbar = ({ imgRoute, pages }: INavbar) => {
         <>  
             {sizeScreen > 1023 ? (
                 <nav className = 'h-24 px-8 pt-2 flex flex-row justify-between gap-12 bg-gray-lighter outline-4'>
-                    <NavBarContent imgRoute = {imgRoute} pages = {pages} elementClicked={elementClicked} handlerNavbarSlidersClick={handlerNavbarSlidersClick} />
+                    <NavBarContentDesktop imgRoute = {imgRoute} pages = {pages} />
                 </nav>
             ) : (
                 <>
@@ -56,7 +57,8 @@ const Navbar = ({ imgRoute, pages }: INavbar) => {
                         <div className='absolute w-[40px] -left-8 top-2'>
                             <Button typeBtn = "button" typeStyleBtn = 'primary-neutral' iconBtn = {XMarkIcon} onClickBtn = {handlerShowNavbar}/>
                         </div>
-                        <NavBarContent imgRoute = {imgRoute} pages = {pages} elementClicked={elementClicked} handlerNavbarSlidersClick={handlerNavbarSlidersClick} />
+
+                        <NavbarContentMobile pages = {pages} elementClicked={elementClicked} handlerNavbarSlidersClick={handlerNavbarSlidersClick} />
                     </aside>
                 </>
             )}

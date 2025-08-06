@@ -1,6 +1,7 @@
 import Button from "../../components/button/button";
 
 const Home = () => {
+    console.log('home !');
     return (
         <div className="w-full flex justify-center items-center ">
             <div className="w-100 flex  flex-col gap-10 m-5">

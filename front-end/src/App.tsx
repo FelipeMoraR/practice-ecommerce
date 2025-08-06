@@ -10,7 +10,7 @@ import Register from "./pages/public/register.page";
 
 function App() {
     const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
-
+    console.log('render ')
     if (isLoadingValidationSession) {
         return <Loader text = "Validating sesion"/>
     }

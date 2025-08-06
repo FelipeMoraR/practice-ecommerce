@@ -80,7 +80,7 @@ export const loginUserController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
+        const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
@@ -181,7 +181,7 @@ export const registerUserController = async (req, res) => {
 
       // NOTE Generate token, endpoint and sending email
       // NOTE This will be controlled in the front, we extract the token as a param and validate with the confirmEmailVerificationController
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
+      const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m', 'Verify email')
       await saveLogController('AUDIT', 'verification email Sended', email, ip)
     })
@@ -312,7 +312,7 @@ export const sendEmailVerificationController = async (req, res) => {
       }
 
       // NOTE Sending email
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
+      const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
       await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { email } })
@@ -360,7 +360,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
+        const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Forgot password')
 
         await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: user.id } })
@@ -408,7 +408,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email
       // TODO This has to be send to the update password form
-      const endpoint = process.env.CUSTOM_DOMAIN + '/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
+      const endpoint = process.env.CORS_ORIGIN + '/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
       await sendEmail(user.email, endpoint, user.name, user.lastName, 'Forgot password')
 
       await User.update({ lastForgotPasswordSentAt: now, updateAt: now }, { where: { id: user.id } })
@@ -933,7 +933,7 @@ export const createClientController = async (req, res) => {
 
       // NOTE Generate token, endpoint and sending email
       // NOTE This will be controlled in the front, we extract the token as a para and validate with the confirmEmailVerificationController
-      const endpointWithOutToken = process.env.CUSTOM_DOMAIN + '/verifying-email?token='
+      const endpointWithOutToken = process.env.CORS_ORIGIN + '/verifying-email?token='
       await handlerSendingEmailWithLink(newUser.id, newUser.email, newUser.name, newUser.lastName, endpointWithOutToken, '10m', 'Verify email')
       await saveLogController('INFO', 'Admin was able to created a new client', adminEmail, ip)
     })
