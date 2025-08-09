@@ -9,18 +9,22 @@ import useModal from "../../hooks/useModal";
 import { UseAuthValidateSessionContext } from "../../contexts/authValidation.context";
 import { IApi } from "../../models/types/api.model";
 import Button from "../../components/button/button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 
 const ForgotPassword = () => {
     const { api } = UseAxiosContext();
     const { apiIsLoading, callApi, errorApi, responseApi } = useApi<IApi, FormForgotPasswordValues>((data) => api.post('/users/send-email-forgot-password', data))
     const { showModal, hideModal, modalIsOpen } = useModal();
-    const { deviceId } = UseAuthValidateSessionContext();
+    const { deviceId, userIsLoged } = UseAuthValidateSessionContext();
     const navigate = useNavigate();
+    
+    if(userIsLoged) {
+       return <Navigate to='/profile' replace/>
+    }
 
     const onSubmit = async (data: FormForgotPasswordValues) => {
         const response = await callApi(data);
-        if(response && response.status === 200) showModal('forgotPasswordModal');   
+        if (response && response.status === 200) showModal('forgotPasswordModal');   
     }
 
     return (

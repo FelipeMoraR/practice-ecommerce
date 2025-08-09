@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import Navbar from '../components/navbar/navbar';
 import Footer from '../components/footer/footer';
 import logo from '../assets/images/dogdoing.jpg';
-import { IPageNavbarFather } from '../models/types';
+import { IPageNavbarFather } from '../models/types/navbar.model';
 import { UseAuthActionContext } from '../contexts/authAction.context';
 import Loader from '../components/loader/loader';
 import Modal from '../components/modal/modal';
@@ -32,7 +32,7 @@ const PageLayout = ({ pages }: IPageLayout) => {
     return (
         <>
             { isLoadingLogout && <Loader text='Logout'/> }
-            { <Modal header = {<h1>Logout status</h1>} body = {<p>{errorLogout}</p>} isOpen = {modalIsOpen('logoutModal')} hideModal={handleHideErrorLogout} /> }
+            { <Modal header = {<h1>Logout status</h1>} body = {<p>{errorLogout?.error}</p>} isOpen = {modalIsOpen('logoutModal')} hideModal={handleHideErrorLogout} /> }
 
             <Navbar imgRoute = {logo} pages={pages}/>
             <Outlet/>

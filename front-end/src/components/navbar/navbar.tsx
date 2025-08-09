@@ -1,4 +1,4 @@
-import { INavbar } from '../../models/types';
+import { INavbar } from '../../models/types/navbar.model';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/solid'
 import NavBarContentDesktop from './navbarContentDesktop';
 import NavbarContentMobile from './navbarContentMobile';
@@ -37,7 +37,7 @@ const Navbar = ({ imgRoute, pages }: INavbar) => {
     return (
         <>  
             {sizeScreen > 1023 ? (
-                <nav className = 'h-24 px-8 pt-2 flex flex-row justify-between gap-12 bg-gray-lighter outline-4'>
+                <nav className = 'h-24 px-8 pt-2 flex flex-row justify-between gap-12 bg-gray-lighter outline-4 relative z-90'>
                     <NavBarContentDesktop imgRoute = {imgRoute} pages = {pages} />
                 </nav>
             ) : (
