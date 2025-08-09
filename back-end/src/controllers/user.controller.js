@@ -81,7 +81,7 @@ export const loginUserController = async (req, res) => {
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
         const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
-        console.log('lol =>', endpointWithOutToken)
+
         await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
@@ -106,12 +106,13 @@ export const loginUserController = async (req, res) => {
         })
 
       await saveLogController('AUDIT', 'Validating if the user has already a session with one device', email, ip)
-      const oldTokenInWhiteList = await TokenWhiteList.findOne({ where: { id_device: deviceIdReceived } })
-
+      const oldTokenInWhiteList = await TokenWhiteList.findOne({ where: { id_device: deviceIdReceived, fk_id_user: user.id, fk_id_type_token: 2 } })
+      // NOTE Refreshing token
       if (oldTokenInWhiteList) {
+        console.log(oldTokenInWhiteList.token)
         const oldToken = jwt.decode(oldTokenInWhiteList.token)
         const expOldToken = new Date(oldToken.exp * 1000)
-        await TokenWhiteList.destroy({ where: { id_device: deviceIdReceived } })
+        await TokenWhiteList.destroy({ where: { id_device: deviceIdReceived, fk_id_user: user.id, fk_id_type_token: 2 } })
         const idNewBlackListToken = crypto.randomUUID()
         await TokenBlackList.create({ id: idNewBlackListToken, token: oldTokenInWhiteList.token, expDate: expOldToken, fk_id_user: oldTokenInWhiteList.fk_id_user, fk_id_type_token: 2 })
       }
@@ -126,8 +127,8 @@ export const loginUserController = async (req, res) => {
       return { accessToken, refreshToken, deviceId: deviceIdReceived, isVerified: user.isVerified, user }
     })
 
-    if (result.emailSendInCooldown && !result.isVerified) return res.status(403).send({ status: 403, message: 'Account has to be verified but an email was already sended. Check your email.' })
-    if (!result.isVerified) return res.status(403).send({ status: 403, message: 'User must be verified, we sended an email to verify your account.' })
+    if (result.emailSendInCooldown && !result.isVerified) return res.status(409).send({ status: 409, message: 'Account has to be verified but an email was already sended. Check your email.' })
+    if (!result.isVerified) return res.status(400).send({ status: 400, message: 'User must be verified, we sended an email to verify your account.' })
 
     await saveLogController('AUDIT', 'User loged successfull', email, ip)
 
@@ -309,7 +310,7 @@ export const sendEmailVerificationController = async (req, res) => {
       // NOTE Spam controll
       if (!user.isVerified && (now - user.lastVerificationEmailSentAt) / 1000 <= 90) {
         await saveLogController('AUDIT', 'User trying to send another verification email but is in cooldown', user.email, ip)
-        throw new HttpError('Email sended, wait a moment', 403)
+        throw new HttpError('Email sended, wait a moment', 400)
       }
 
       // NOTE Sending email
