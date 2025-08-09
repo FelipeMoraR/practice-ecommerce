@@ -7,22 +7,35 @@ import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
 import { UseAuthValidateSessionContext } from "../../contexts/authValidation.context";
 import { useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Button from "../../components/button/button";
 
 const LoginPage = () => {
-    const { fetchLoginUser, isLoadingLogin, errorLogin } = UseAuthActionContext();
+    const { fetchLoginUser, isLoadingLogin, errorLogin, setErrorLogin } = UseAuthActionContext();
     const { deviceId } = UseAuthValidateSessionContext();
     const { showModal, hideModal, modalIsOpen } = useModal();
+    const [ cooldownResendEmail, setCooldownResetEmail ] = useState<number>(0);
+
     const location = useLocation();
     const navigate = useNavigate();
 
     const onSubmit = async (data: FormLoginValues) => fetchLoginUser(data);
-
+    
     useEffect(() => {
+        setErrorLogin(null); // NOTE this is because the redirect not re render the UseAuthActionContext
         if(location.state && location.state.error) showModal('verifyAccountModalError');
         if(location.state && location.state.data) showModal('verifyAccountModalResult');
-    }, [location.state, showModal]);
+    }, [location.state, showModal, setErrorLogin]);
+    
+    // NOTE Resend vaina cronometeirchon :U 
+    // TODO finish this, we have to reset the counter when the error change
+    useEffect(() => {
+        if(errorLogin && errorLogin.status === 409) {
+            const interval = setInterval(() => setCooldownResetEmail(prev => prev + 1), 1000);
+
+            return () => clearInterval(interval)
+        }
+    }, [errorLogin])
 
     return (
         <>
@@ -65,9 +78,17 @@ const LoginPage = () => {
                     />
                 </div>
                 <div className="flex flex-col gap-3">
-                    <Button typeBtn='button' typeStyleBtn="secondary-neutral" onClickBtn={() => navigate('/forgot-password')} textBtn="Forgot password?"/>
+                    {errorLogin && errorLogin.status === 409 && 
+                        <div>
+                            {cooldownResendEmail}
+                            <Button typeBtn="button" typeStyleBtn="secondary-yellow" textBtn="Resend verify email"/>
+                        </div>
+                    }
+                    <div className="flex gap-3 min-h-[40px]">
+                        <Button typeBtn='button' typeStyleBtn="primary-neutral" onClickBtn={() => navigate('/register')} textBtn="Sign up!"/>
 
-                    <Button typeBtn='button' typeStyleBtn="primary-neutral" onClickBtn={() => navigate('/register')} textBtn="Don't have an account? Sign up!"/>
+                        <Button typeBtn='button' typeStyleBtn="secondary-neutral" onClickBtn={() => navigate('/forgot-password')} textBtn="Password reset"/>
+                    </div>
                 </div>
             </section>
         </>

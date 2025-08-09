@@ -15,7 +15,7 @@ const VerifyEmail = () => {
     
     if(apiIsLoading) return <Loader text="Verifying email"/>
     
-    if (errorApi === 'Not Modified') return <Navigate to="/login" state={{ data: {status: 304, message: 'User is verified, please login.'}, error: null }} replace /> 
+    if (errorApi && errorApi.status === 304) return <Navigate to="/login" state={{ data: {status: 304, message: 'User is verified, please login.'}, error: null }} replace /> 
 
     if(errorApi) return <Navigate to="/login" state={{ data: null, error: errorApi }} replace />
     

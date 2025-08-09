@@ -6,17 +6,19 @@ import { IUserProps } from "../models/types/user.model.ts";
 import useApi from "../hooks/useApi.ts";
 import { AxiosResponse } from "axios";
 import { useNavigate } from "react-router-dom";
+import { IErrorApi } from "../models/types/api.model.ts";
 
 interface IAuthActionContext {
     fetchLoginUser: (data: FormLoginValues) => Promise<void>;
     isLoadingLogin: boolean;
-    errorLogin: string | null; 
+    errorLogin: IErrorApi | null; 
     fetchLogoutUser: () => Promise<void>; // NOTE Async functions always return implicit a promise
+    setErrorLogin: React.Dispatch<React.SetStateAction<IErrorApi | null>>
     // fetchLogoutUser: () => void;
     isLoadingLogout: boolean;
-    errorLogout: string | null; 
+    errorLogout: IErrorApi | null; 
     responseLogout: AxiosResponse<unknown, unknown> | null;
-    setErrorLogout: React.Dispatch<React.SetStateAction<string | null>>
+    setErrorLogout: React.Dispatch<React.SetStateAction<IErrorApi | null>>
 }
 
 interface IResponseLogin {
@@ -41,7 +43,7 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
     const { api } = UseAxiosContext();
     const navigate = useNavigate();
     const { setUserIsLoged, setUserData, userIsLoged } = UseAuthValidateSessionContext();
-    const { apiIsLoading: isLoadingLogin, errorApi: errorLogin, setErrorApi, callApi } = useApi<IResponseLogin, FormLoginValues>((data) => api.post("/users/login", data), false);
+    const { apiIsLoading: isLoadingLogin, errorApi: errorLogin, setErrorApi: setErrorLogin, callApi } = useApi<IResponseLogin, FormLoginValues>((data) => api.post("/users/login", data), false);
     const { apiIsLoading: isLoadingLogout, callApi: callLogout, errorApi: errorLogout, responseApi: responseLogout, setErrorApi: setErrorLogout } = useApi(() => api.post('/users/logout'));
     const shouldNavigateAfterLogout = useRef<boolean>(false); // NOTE To solve the race condition problem
 
@@ -50,12 +52,15 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
             shouldNavigateAfterLogout.current = false;
             navigate('/', { replace: true });
         }
-    }, [navigate, userIsLoged])
+    }, [navigate, userIsLoged]);
 
     const fetchLoginUser: (data: FormLoginValues) => Promise<void> = async (data) => {
         if(userIsLoged) {
             // NOTE Border case
-            setErrorApi('You already are logged, logout to use login');
+            setErrorLogin({
+                status: 500,
+                error: 'You already are logged, logout to use login'
+            });
             return;
         }
        
@@ -70,21 +75,27 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
      
         setUserIsLoged(true);
         setUserData(response.data.user);
-        
+        navigate('/profile');
         
         return;
     };
 
     const fetchLogoutUser: () => Promise<void> = async () => {
         if(!userIsLoged) {
-            setErrorLogout('User must be logged to logout');
+            setErrorLogout({
+                status: 500,
+                error: 'User must be logged to logout'
+            });
             return;
         }
         
         const response = await callLogout();
 
         if(!response) {
-            setErrorLogout('Unexpected error, please try again');
+            setErrorLogout({
+                status: 500,
+                error: 'Unexpected error, please try again'
+            });
             return;
         }
         
@@ -98,7 +109,7 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
     }
 
     return (
-        <AuthActionContext.Provider value = {{ fetchLoginUser, isLoadingLogin, errorLogin, fetchLogoutUser, isLoadingLogout, errorLogout, responseLogout, setErrorLogout }}>
+        <AuthActionContext.Provider value = {{ fetchLoginUser, isLoadingLogin, errorLogin, setErrorLogin, fetchLogoutUser, isLoadingLogout, errorLogout , responseLogout, setErrorLogout }}>
             {children}
         </AuthActionContext.Provider>
     )

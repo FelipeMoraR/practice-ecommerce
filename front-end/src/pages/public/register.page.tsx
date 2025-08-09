@@ -101,7 +101,7 @@ const Register = () => {
                 </div>
                 
                 <div>
-                    <Button typeBtn="button" typeStyleBtn="secondary-neutral" textBtn="You already have an account? Sing up!" onClickBtn={() => navigate('/login')} />
+                    <Button typeBtn="button" typeStyleBtn="primary-neutral" textBtn="You already have an account? Sing up!" onClickBtn={() => navigate('/login')} />
                 </div>
             </section>
         </>

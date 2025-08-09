@@ -1,5 +1,5 @@
 import { UseAuthValidateSessionContext } from '../../contexts/authValidation.context';
-import { INavbar } from "../../models/types";
+import { INavbar } from "../../models/types/navbar.model";
 import { ChevronDownIcon, UserIcon } from '@heroicons/react/24/solid'
 import Button from "../button/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -12,7 +12,7 @@ const NavBarContentDesktop = ({ imgRoute, pages }: INavbar) => {
     
     return (
         <>  
-            <div className = 'w-20 h-full pb-2'>
+            <div className = 'w-20 h-full pb-2 lg:hidden xl:block'>
                 <img src = {imgRoute} alt="logoNavbar" className='size-full object-contain border-4 border-black ' />
             </div>
 
