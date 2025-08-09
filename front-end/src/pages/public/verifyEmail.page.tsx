@@ -10,8 +10,7 @@ const VerifyEmail = () => {
     const api = createCustomAxios(import.meta.env.VITE_ENDPOINT_BACKEND);
     const token = searchParams.get('token');
     const { errorApi, responseApi, apiIsLoading } = useApi<IApi, null>(() => api.post(`users/confirm-email/${token}`), true);
-    console.log('responseee=> Aaaaa', responseApi?.data);
-    console.log('error => ', errorApi);
+    
     if(!token) return <Navigate to="/login" state={{ data: null, error: 'Token not provided/invalid' }} replace /> 
     
     if(apiIsLoading) return <Loader text="Verifying email"/>

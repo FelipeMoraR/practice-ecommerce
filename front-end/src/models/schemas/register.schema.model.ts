@@ -39,7 +39,6 @@ export const registerSchema = z.object({
     }
 
     // ANCHOR - password valdiation
-
     if (!regexPassword.test(data.password)) {
       context.addIssue({
         message: 'Special caracters of password are invalid, special character allowed are _ - @ # $ ! ¡ .',

@@ -8,7 +8,7 @@ import LoginPage from "./pages/public/login.page";
 import Loader from "./components/loader/loader";
 import Register from "./pages/public/register.page";
 import VerifyEmail from "./pages/public/verifyEmail.page";
-
+import ForgotPassword from "./pages/public/forgotPassword.page"
 function App() {
     const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
     if (isLoadingValidationSession) {
@@ -100,7 +100,7 @@ function App() {
                 <Route index element = { <Home/> } />
                 <Route path = 'login' element =  { <LoginPage/> } />
                 <Route path = 'register' element = { <Register/> } />
-
+                <Route path = 'forgot-password' element = {<ForgotPassword/>} />
                 <Route element = {<PrivateRoute />}>
                     <Route path = 'profile' element =  { <h1>Profile</h1> } />
                 </Route>

@@ -35,7 +35,7 @@ const sizeClasses: Record<Size, string> = {
 const Text = ({ text, typeText, color, size }: IText) => {
     const Tag = typeText;
     return (
-        <Tag className = {`${colorClasses[color]} ${sizeClasses[size]}`}>
+        <Tag className = {`${colorClasses[color]} ${sizeClasses[size]}`} >
             {text}
         </Tag>
     );

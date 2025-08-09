@@ -103,7 +103,7 @@ export const registerSchema = z.object({
 
 export const sendForgotPasswordEmailSchema = z.object({
   email: z.string().email('Invalid email address').min(1, 'Email is required').max(250, 'Max length email 250'),
-  deviceId: z.number().optional()
+  deviceId: z.string().min(1, 'Device id is required').max(100, 'Max length email 100')
 }).refine((data) => {
   const emailDomain = data.email.split('@')[1]?.toLowerCase()
   return emailDomain && !blockedDomains.includes(emailDomain)
