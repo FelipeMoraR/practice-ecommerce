@@ -4,6 +4,7 @@ import { ZodTypeAny, z } from "zod";
 import Input from "../input/input.tsx";
 import Button from "../button/button.tsx";
 import Text from "../text/text.tsx";
+import { IErrorApi } from "../../models/types/api.model.ts";
 
 type Mode = "onBlur" | "onChange" | "onSubmit" | "onTouched" | "all" | undefined;
 type StyleForm = 'primary' | 'secondary'
@@ -23,7 +24,7 @@ interface FormProps<T extends ZodTypeAny> {
     mode: Mode;
     defaultValues: z.infer<T>; // NOTE This create the object type by the schema
     onSubmit: SubmitHandler<z.infer<T>>; 
-    errorSubmit: string | null;
+    errorSubmit: IErrorApi | null;
     gridCols: number;
     fields: InputProps[];
 }
@@ -68,11 +69,11 @@ const Form = <T extends ZodTypeAny>({ styleForm, schema, mode, defaultValues, on
             
 
             { errorSubmit && 
-                <Text color={styleForm === 'primary' ? "red-darkest" : 'red'} size="base" text={errorSubmit} typeText="p"/>
+                <Text color={styleForm === 'primary' ? "red-darkest" : 'red'} size="base" text={errorSubmit.error} typeText="p"/>
             }
 
             <div className="w-full flex justify-center">
-                <div className='min-w-[50px] max-w-[200px] w-full h-[40px] shrink-0'>
+                <div className='min-w-[50px] w-full h-[40px] shrink-0 grow px-2'>
                     <Button typeBtn="submit" typeStyleBtn={Object.keys(errors).length > 0 ? 'primary-red' : 'secondary-green' } textBtn="Send" disabled={Object.keys(errors).length > 0} />
                 </div>
             </div>
