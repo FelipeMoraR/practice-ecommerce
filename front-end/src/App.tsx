@@ -1,5 +1,6 @@
 import { Routes, Route } from "react-router-dom"
 import PrivateRoute from "./components/routes/privateRoute"
+import PublicRoute from "./components/routes/publicRoute"
 import PageLayout from "./layouts/pageLayout"
 import Home from "./pages/public/home.page"
 import { IPageNavbarFather } from "./models/types/navbar.model"
@@ -12,7 +13,7 @@ import ForgotPassword from "./pages/public/forgotPassword.page";
 import ResetPassword from "./pages/public/resetPassword.page";
 
 function App() {
-    const { userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
+    const { userData, userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
     if (isLoadingValidationSession) {
         return <Loader text = "Validating sesion"/>
     }
@@ -36,64 +37,24 @@ function App() {
                         text: 'Pants'
                     }
                 ]
-            },
-            {
-                anchor: 'Contact',
-                text: 'Contact',
-                subPages: [
-                    {
-                        anchor: 'contact1',
-                        text: 'contact1'
-                    },
-                    {
-                        anchor: 'contact2',
-                        text: 'contact2'
-                    },
-                    {
-                        anchor: 'contact3',
-                        text: 'contact3'
-                    }
-                ]
-            },
-            {
-                anchor: 'Contact',
-                text: 'Contact',
-                subPages: [
-                    {
-                        anchor: 'contact1',
-                        text: 'contact1'
-                    },
-                    {
-                        anchor: 'contact2',
-                        text: 'contact2'
-                    },
-                    {
-                        anchor: 'contact3',
-                        text: 'contact3'
-                    }
-                ]
             }
     ]
 
     if (userIsLoged) {
         pages = [...pages, {
-                anchor: 'profile',
-                text: 'profile',
-                subPages: [
-                    {
-                        anchor: 'profile1',
-                        text: 'profile1'
-                    },
-                    {
-                        anchor: 'profile2',
-                        text: 'profile2'
-                    },
-                    {
-                        anchor: 'profile3',
-                        text: 'profile3'
-                    }
-                ]
+                anchor: 'private',
+                text: 'Private',
+                subPages: null
             }]
+    }
+
+    // NOTE If is admin show this page
+    if (userData?.typeUser === 1) {
+        pages = [...pages, {
+            anchor: '/admin/users',
+            text: 'Users',
+            subPages: null
+        }]
     }
     
     return (
@@ -102,8 +63,11 @@ function App() {
                 <Route index element = { <Home/> } />
                 <Route path = 'login' element =  { <LoginPage/> } />
                 <Route path = 'register' element = { <Register/> } />
-                <Route path = 'forgot-password' element = {<ForgotPassword/>} />
-                <Route path = '/validation/reset-password' element = { <ResetPassword/> } />
+                {/* NOTE This is to protect the pages that only can be accessed without a session*/}
+                <Route element={<PublicRoute />}>
+                    <Route path = 'forgot-password' element = {<ForgotPassword/>} />
+                    <Route path = 'reset-password' element = { <ResetPassword/> } />
+                </Route>
                 <Route element = {<PrivateRoute />}>
                     <Route path = 'profile' element =  { <h1>Profile</h1> } />
                 </Route>

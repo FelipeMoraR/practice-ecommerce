@@ -80,9 +80,10 @@ export const loginUserController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
+        // FIXME This is to avoid the limit per month of mailtrap
         const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
-
-        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
+        console.log('login => ', endpointWithOutToken)
+        // await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Verify email')
 
         await User.update({ lastVerificationEmailSentAt: now, updatedAt: now }, { where: { id: user.id } })
         await saveLogController('AUDIT', 'Attemp to login but user wasnt verified. Email was sended', email, ip)
@@ -362,13 +363,14 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email in case user isn't verified
       if (!user.isVerified) {
-        const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
-        await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Forgot password')
+        // FIXME Remove the comments in a couple of days
+        // const endpointWithOutToken = process.env.CORS_ORIGIN + '/validation/verifying-email?token='
+        // await handlerSendingEmailWithLink(user.id, user.email, user.name, user.lastName, endpointWithOutToken, '10m', 'Forgot password')
 
         await User.update({ lastVerificationEmailSentAt: now, updateAt: now }, { where: { id: user.id } })
         await saveLogController('INFO', 'User send a new email verification', user.email, ip)
 
-        return { status: 200, message: 'The email to verify user was sended' }
+        return { status: 200, message: 'User is not verified, The email to verify it was sended.' }
       }
 
       // NOTE Spam controll forgot password
@@ -411,7 +413,8 @@ export const sendForgotPasswordEmailController = async (req, res) => {
       // NOTE Sending email
       // TODO This has to be send to the update password form
       const endpoint = process.env.CORS_ORIGIN + '/validation/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
-      await sendEmail(user.email, endpoint, user.name, user.lastName, 'Forgot password')
+      console.log('endpoint jeje', endpoint)
+      // await sendEmail(user.email, endpoint, user.name, user.lastName, 'Forgot password')
 
       await User.update({ lastForgotPasswordSentAt: now, updateAt: now }, { where: { id: user.id } })
       await saveLogController('INFO', 'User sended a new email to retrieve his password', user.email, ip)

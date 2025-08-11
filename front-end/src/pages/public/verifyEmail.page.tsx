@@ -11,7 +11,7 @@ const VerifyEmail = () => {
     const token = searchParams.get('token');
     const { errorApi, responseApi, apiIsLoading } = useApi<IApi, null>(() => api.post(`users/confirm-email/${token}`), true);
     
-    if(!token) return <Navigate to="/login" state={{ data: null, error: 'Token not provided/invalid' }} replace /> 
+    if(!token) return <Navigate to="/login" state={{ data: null, error: 'Error verifiyng account: Token not provided/invalid' }} replace /> 
     
     if(apiIsLoading) return <Loader text="Verifying email"/>
     
