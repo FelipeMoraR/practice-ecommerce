@@ -40,7 +40,7 @@ const Input = <T extends ZodTypeAny>({name, control, label, type, inputStyle = '
                 render = {({ field }) => (
                     <input
                         id = { name }
-                        type={ type }
+                        type = { type }
                         {...field} // NOTE Spread operator, this give all the necesary configuration of the input to work with the form
                         className = {error ? stylesInput[`${inputStyle}-error`] : stylesInput[inputStyle]}
                         placeholder={placeholder}

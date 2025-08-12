@@ -52,19 +52,19 @@ const Form = <T extends ZodTypeAny>({ styleForm, schema, mode, defaultValues, on
         <form onSubmit = { handleSubmit(onSubmit) } className = {objStylesForm[styleForm]}>
             <div className={`grid grid-cols-1 ${objGridCols[gridCols]} gap-3`}>
                 {
-                fields.map((element: InputProps, index: number) => (
-                    <Input
-                        key = {index}
-                        name = {element.name as Path<z.infer<T>>}
-                        control = {control}
-                        label = {element.label}
-                        type = {element.type}
-                        inputStyle={element.inputStyle}
-                        error = {errors[element.name]}
-                        placeholder={element.placeholder}
-                    />
-                ))
-            }
+                    fields.map((element: InputProps, index: number) => (
+                        <Input
+                            key = {index}
+                            name = {element.name as Path<z.infer<T>>}
+                            control = {control}
+                            label = {element.label}
+                            type = {element.type}
+                            inputStyle={element.inputStyle}
+                            error = {errors[element.name]}
+                            placeholder={element.placeholder}
+                        />
+                    ))
+                }
             </div>
             
 

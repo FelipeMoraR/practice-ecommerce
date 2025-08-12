@@ -19,7 +19,7 @@ export const getAllCommunes = async (req, res) => {
       return comunesCleaned
     })
 
-    return res.status(200).send({ status: 200, data: result })
+    return res.status(200).send({ status: 200, message: 'Ok', data: result })
   } catch (error) {
     console.log('getAllCommunes: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
@@ -43,7 +43,7 @@ export const getAllRegions = async (req, res) => {
       return regionsCleaned
     })
 
-    return res.status(200).send({ status: 200, data: result })
+    return res.status(200).send({ status: 200, message: 'Ok', data: result })
   } catch (error) {
     console.log('getAllRegions: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })

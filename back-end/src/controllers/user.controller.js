@@ -412,7 +412,7 @@ export const sendForgotPasswordEmailController = async (req, res) => {
 
       // NOTE Sending email
       // TODO This has to be send to the update password form
-      const endpoint = process.env.CORS_ORIGIN + '/validation/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
+      const endpoint = process.env.CORS_ORIGIN + '/reset-password?token=' + passwordResetTokenJwt + '&secret=' + secretReset
       console.log('endpoint jeje', endpoint)
       // await sendEmail(user.email, endpoint, user.name, user.lastName, 'Forgot password')
 

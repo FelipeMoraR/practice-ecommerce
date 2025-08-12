@@ -8,6 +8,7 @@ import { IApi } from "../../models/types/api.model";
 import Button from "../../components/button/button";
 import Form from "../../components/form/form";
 import { updateBasicUserInfoSchema, FormUpdateBasicUserInfoValues } from "../../models/schemas/updateBasicUserInfo.schema.model";
+import { addAddressSquema, FormAddAddressValues } from "../../models/schemas/addAddress.schema.model";
 import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
 
@@ -15,12 +16,21 @@ import useModal from "../../hooks/useModal";
 type options = 'basicInfo' | 'phone' | 'password' | 'address';
 
 type IUserInfo = {
-    addresses: Array<unknown>;
+    addresses: Array<IAddress>;
     email: string;
     isVerified: boolean;
     lastname: string;
     name: string;
     phone: string | null;
+}
+
+type regionCommune = {
+    id: number;
+    name: string
+}
+
+interface IInfoRegionCommune extends IApi {
+    data: Array<regionCommune>
 }
 
 interface IResponseUser extends IApi {
@@ -34,15 +44,45 @@ interface ISectionToUpdate {
     address: boolean;
 }
 
+interface IAddress {
+    street: string;
+    number: number;
+    numDpto: number;
+    postalCode: string;
+    idCommune: number;
+}
+
 const Profile = () => {
     const { api } = UseAxiosContext();
+    const { showModal, hideModal, modalIsOpen } = useModal();
+    const [showForm, setShowForm] = useState<ISectionToUpdate>({
+        basicInfo: false,
+        phone: false,
+        password: false,
+        address: false,
+    });
+
     const { 
         responseApi: responseUserInfo, 
         apiIsLoading: userInfoIsLoading,
         errorApi: userInfoError
     } = useApi<IResponseUser, undefined>(() => api.get('users/get-user'), true);
     const [userInfo, setUserInfo] = useState<IUserInfo | undefined>(undefined);
-    
+
+    const { 
+        responseApi: responseAllRegion, 
+        apiIsLoading: allRegionIsLoading,
+        errorApi: allRegionError
+    } = useApi<IInfoRegionCommune, undefined>(() => api.get('address/all-regions'), true);
+    const [region, setRegion] = useState<Array<regionCommune> | undefined>(undefined);
+
+    const { 
+        responseApi: responseAllCommune, 
+        apiIsLoading: allCommuneIsLoading,
+        errorApi: allCommuneError
+    } = useApi<IInfoRegionCommune, undefined>(() => api.get('address/all-communes'), true);
+    const [commune, setCommune] = useState<Array<regionCommune> | undefined>(undefined);
+
     const {
         responseApi: responseUpdateBasicInfo,
         apiIsLoading: UpdateBasicInfoIsLoading,
@@ -51,14 +91,13 @@ const Profile = () => {
     } = useApi<IApi, FormUpdateBasicUserInfoValues>((data) => api.patch('users/update-basic-user-info', data));
     const updatedBasicInfoConfirmed = useRef<boolean>(false);
 
-    const { showModal, hideModal, modalIsOpen } = useModal();
-
-    const [showForm, setShowForm] = useState<ISectionToUpdate>({
-        basicInfo: false,
-        phone: false,
-        password: false,
-        address: false,
-    });
+    const {
+        responseApi: responseAddAddress,
+        apiIsLoading: addAddressIsLoading,
+        callApi: callAddAddress,
+        errorApi: errorAddAddress
+    } = useApi((data) => api.post('/users/add-user-address', data))
+    const [userAddress, setUserAddress] = useState<Array<IAddress> | undefined>(undefined);
 
     const changeStatusForm = (option: options) => setShowForm(prev => ({ ...prev, [option]: !prev[option] }))
     
@@ -71,10 +110,25 @@ const Profile = () => {
         if (result?.status === 200) setUserInfo(prev => prev ? { ...prev, name: data.name, lastname: data.lastName } : undefined)
     }
 
+    const addAddress = (data: FormAddAddressValues) => {
+        callAddAddress(data);
+    }
+
     // NOTE To capture the entry data
     useEffect(() => {
         setUserInfo(responseUserInfo?.data.user);
+        setUserAddress(responseUserInfo?.data.user.addresses);
     }, [responseUserInfo]);
+
+    // NOTE To capture regions
+    useEffect(() => {
+        setRegion(responseAllRegion?.data.data);
+    }, [responseAllRegion]);
+
+    // NOTE To capture communes
+    useEffect(() => {
+        setCommune(responseAllCommune?.data.data);
+    }, [responseAllCommune])
 
     // NOTE To controll the view of modal
     useEffect(() => {
@@ -82,20 +136,40 @@ const Profile = () => {
             showModal('resultUpdateBasicInfo');
         }
     }, [responseUpdateBasicInfo, showModal]);
+
+
+
+    useEffect(() => {
+        console.log('o => ', commune);
+    }, [commune])
     
-    if (userInfoIsLoading) {
+
+    if (userInfoIsLoading || allRegionIsLoading || allCommuneIsLoading) {
         return (
             <> 
                 <section className="flex mx-auto p-2 my-3">
                     <Text text="Profile" color="black" size="3xl" typeText="h1"/>
                 </section>
-                <Loader text="Loading user data" />
+                <Loader text="Preparing data" />
             </>
         )
     }
+
     if (userInfoError) {
         return (
             <h1>ERROR LOADING USER INFO {userInfoError.status} {userInfoError.error}</h1>
+        )
+    }
+
+    if (allRegionError) {
+        return (
+            <h1>ERROR LOADING all regions</h1>
+        )
+    }
+
+    if (allCommuneError) {
+        return (
+            <h1>ERROR LOADING all communes</h1>
         )
     }
 
@@ -123,7 +197,7 @@ const Profile = () => {
                 isOpen = {modalIsOpen('resultUpdateBasicInfo')}
             />
 
-            <section className="flex flex-col mx-auto p-2 my-3 gap-6">
+            <section className="flex mx-auto p-2 my-3 gap-6">
                 <Text text="Profile" color="black" size="3xl" typeText="h1"/>
                 <div>
                     { UpdateBasicInfoIsLoading ? (<Loader isFullScreen = {false} />) : (
@@ -203,6 +277,57 @@ const Profile = () => {
                         />
                     )}
                     
+                </div>
+
+                <div>
+                    {addAddressIsLoading ? (<Loader isFullScreen = {false} />) : (
+                        <CardInfo 
+                            header = {
+                                <div className="flex gap-3 justify-between">
+                                    <Text text="Addresses" color="black" size="2xl" typeText="strong"/>
+                                    <div className="max-w-[100px]">
+                                        <Button typeBtn="button" typeStyleBtn={showForm.address ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("address")} textBtn={showForm.address ? 'Cancel' : 'Add'} />
+                                    </div>
+                                </div> 
+                            }
+                            body = {
+                                showForm.address ? (
+                                    <div className="flex flex-col gap-3">
+                                        <Form
+                                            mode="all"
+                                            schema={addAddressSquema}
+                                            onSubmit={addAddress}
+                                            defaultValues={{idCommune: 1, number: 0, postalCode: '', street: '', numDpto: 0}}
+                                            errorSubmit={errorAddAddress}
+                                            fields={[
+                                                
+                                            ]}
+                                            gridCols={1}
+                                            styleForm="primary"
+                                        />
+
+                                        <div className="flex flex-col gap-1">
+                                            {userAddress?.map((el, index) => (
+                                                <div key = {index}>
+                                                    {JSON.stringify(el)}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                      
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        {userAddress?.map((el, index) => (
+                                            <div key = {index}>
+                                                {JSON.stringify(el)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )
+                            }
+                            typeCard={1}
+                        />
+                    )}
                 </div>
             </section>
         </>
