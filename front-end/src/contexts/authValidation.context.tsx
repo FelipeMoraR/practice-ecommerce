@@ -76,7 +76,7 @@ export const AuthValidateSessionContextProvider = ({ children }: { children: Rea
     } 
     if(!pathPage) fetchValidateSession();
   }, []);
-  console.log('userData => ', userData);
+  
   return (
     <AuthValidateSessionContext.Provider
       value={{ userIsLoged, isLoadingValidationSession, errorValidationSession, userData, setUserData, setUserIsLoged, deviceId }}

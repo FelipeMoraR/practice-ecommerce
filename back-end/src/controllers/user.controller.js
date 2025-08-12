@@ -522,7 +522,7 @@ export const viewUserController = async (req, res) => {
       return userInfoParsed
     })
 
-    return res.status(200).send({ status: 200, user })
+    return res.status(200).send({ status: 200, message: 'User found', user })
   } catch (error) {
     console.log('viewUserController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })

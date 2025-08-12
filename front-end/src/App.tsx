@@ -11,6 +11,7 @@ import Register from "./pages/public/register.page";
 import VerifyEmail from "./pages/public/verifyEmail.page";
 import ForgotPassword from "./pages/public/forgotPassword.page";
 import ResetPassword from "./pages/public/resetPassword.page";
+import Profile from "./pages/public/profile.page"
 
 function App() {
     const { userData, userIsLoged, isLoadingValidationSession } = UseAuthValidateSessionContext();
@@ -69,7 +70,7 @@ function App() {
                     <Route path = 'reset-password' element = { <ResetPassword/> } />
                 </Route>
                 <Route element = {<PrivateRoute />}>
-                    <Route path = 'profile' element =  { <h1>Profile</h1> } />
+                    <Route path = 'profile' element =  { <Profile/> } />
                 </Route>
             </Route>
 
