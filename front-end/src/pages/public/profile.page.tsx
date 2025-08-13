@@ -110,8 +110,7 @@ const Profile = () => {
         }
         const result = await callUpdateBasicInfo(data);
         if (result?.status === 200) setUserInfo(prev => prev ? { ...prev, name: data.name, lastname: data.lastName } : undefined);
-            
-        
+        showModal('resultUpdateBasicInfo');
     }
 
     const addAddress = async (data: FormAddAddressValues) => {
@@ -126,11 +125,13 @@ const Profile = () => {
             callUserInfo();
             setShowForm(prev => ({...prev, address: false}));
         }
+        showModal('resultAddAddress');
     }
 
     const deleteAddress = async (id: string) => {
         const result = await callDeleteAddress(id);
         if(result?.status === 200) callUserInfo();
+        showModal('resultDeleteAddress');
     }
     
     // NOTE To capture the entry data
@@ -143,22 +144,6 @@ const Profile = () => {
     useEffect(() => {
         setCommune(responseAllCommune?.data.data);
     }, [responseAllCommune, responseUpdateBasicInfo]);
-
-    // NOTE To controll the view of modal
-    // FIXME Bug rigth here when i delete an address
-    useEffect(() => {
-        if(responseUpdateBasicInfo) {
-            showModal('resultUpdateBasicInfo');
-        } 
-        else if(responseAddAddress) {
-            console.log('enter');
-            hideModal();
-            showModal('resultAddAddress');
-        } else if (responseDeleteAddress) {
-            hideModal();
-            showModal('resultDeleteAddress');
-        }
-    }, [responseUpdateBasicInfo, responseAddAddress, responseDeleteAddress, showModal, hideModal]);
     
     if (userInfoIsLoading || allCommuneIsLoading) {
         return (
@@ -199,7 +184,7 @@ const Profile = () => {
                 hideModal={hideModal} 
                 isOpen={modalIsOpen('updateBasicInfoModal')} 
             />
-                    
+            {/* NOTE Look at the pattern, this can be just one modal */}
             <Modal
                 header = {<Text text="Result updating basic information user" color="black" size="lg" typeText="strong" />}
                 body={<Text text={`${responseUpdateBasicInfo?.data.message}`} color="black" size="base" typeText="em" />}
