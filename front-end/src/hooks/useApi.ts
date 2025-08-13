@@ -16,6 +16,7 @@ const useApi = <T, D>(promiseFn: (data?: D) => Promise<AxiosResponse<T>>, autoCa
       setResponseApi(response);
       return response; // NOTE to inmediate use
     } catch (error) {
+      console.log('use api error => ', error);
       if(error instanceof AxiosError && error.response?.data.message) {
         setErrorApi({
           status: error.response.status,

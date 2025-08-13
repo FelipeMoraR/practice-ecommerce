@@ -45,6 +45,7 @@ interface ISectionToUpdate {
 }
 
 interface IAddress {
+    id: string;
     street: string;
     number: number;
     numDpto: number;
@@ -92,6 +93,12 @@ const Profile = () => {
         errorApi: errorAddAddress
     } = useApi<IInfoRegionCommune, unknown>((data) => api.post('/users/add-user-address', data));
     
+    const {
+        responseApi: responseDeleteAddress,
+        apiIsLoading: deleteAddressIsLoading,
+        callApi: callDeleteAddress,
+        errorApi: errorDeleteAddress
+    } = useApi((idAddress) => api.delete(`/users/delete-user-address/${idAddress}`));
 
     const changeStatusForm = (option: options) => setShowForm(prev => ({ ...prev, [option]: !prev[option] }))
     
@@ -115,6 +122,11 @@ const Profile = () => {
         if(result?.status === 200) callUserInfo();
     }
 
+    const deleteAddress = async (id: string) => {
+        const result = await callDeleteAddress(id);
+        if(result?.status === 200) callUserInfo();
+    }
+    
     // NOTE To capture the entry data
     useEffect(() => {
         setUserInfo(responseUserInfo?.data.user);
@@ -133,8 +145,11 @@ const Profile = () => {
         else if(responseAddAddress) {
             hideModal();
             showModal('resultAddAddress');
+        } else if (responseDeleteAddress) {
+            hideModal();
+            showModal('resultDeleteAddress');
         }
-    }, [responseUpdateBasicInfo, responseAddAddress, showModal, hideModal]);
+    }, [responseUpdateBasicInfo, responseAddAddress, responseDeleteAddress, showModal, hideModal]);
     
     if (userInfoIsLoading || allCommuneIsLoading) {
         return (
@@ -188,6 +203,13 @@ const Profile = () => {
                 body={<Text text={`${responseAddAddress?.data.message}`} color="black" size="base" typeText="em" />}
                 hideModal={hideModal}
                 isOpen = {modalIsOpen('resultAddAddress')}
+            />
+
+            <Modal
+                header = {<Text text="Result deleting address" color="black" size="lg" typeText="strong" />}
+                body={<Text text={`${responseDeleteAddress?.data.message}`} color="black" size="base" typeText="em" />}
+                hideModal={hideModal}
+                isOpen = {modalIsOpen('resultDeleteAddress')}
             />
 
             <section className="flex mx-auto p-2 my-3 gap-6">
@@ -273,6 +295,8 @@ const Profile = () => {
                 </div>
 
                 <div>
+                    {deleteAddressIsLoading && (<Loader text="Deleting address"/>)}
+                    {errorDeleteAddress && (<h1>ERROOOOOOOOOOOR {errorAddAddress?.error}</h1>)}
                     {addAddressIsLoading ? (<Loader text="Adding a new address" isFullScreen = {false} />) : (
                         <CardInfo 
                             header = {
@@ -346,8 +370,9 @@ const Profile = () => {
                                 ) : (
                                     <div className="flex flex-col gap-1">
                                         {responseUserInfo?.data.user.addresses.map((el, index) => (
-                                            <div key = {index}>
+                                            <div key = {index} className="flex">
                                                 {JSON.stringify(el)}
+                                                <Button typeBtn="button" typeStyleBtn="primary-red" onClickBtn={() => deleteAddress(el.id)} textBtn="delete" />
                                             </div>
                                         ))}
                                     </div>

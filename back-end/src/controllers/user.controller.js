@@ -513,7 +513,7 @@ export const viewUserController = async (req, res) => {
       if (!userInfo.useraddresses) return userInfoParsed
 
       const addressesParsed = userInfo.useraddresses.map(addrs => {
-        const addressToSave = { id: addrs.id, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: addrs.address.commune.name }
+        const addressToSave = { id: addrs.address.id, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: addrs.address.commune.name }
         return addressToSave
       })
 
