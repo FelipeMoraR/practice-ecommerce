@@ -56,6 +56,7 @@ interface IAddress {
 const Profile = () => {
     const { api } = UseAxiosContext();
     const { showModal, hideModal, modalIsOpen } = useModal();
+    const [addressCount, setAddressCount] = useState<number>(0);
     const [showForm, setShowForm] = useState<ISectionToUpdate>({
         basicInfo: false,
         phone: false,
@@ -108,7 +109,9 @@ const Profile = () => {
             return
         }
         const result = await callUpdateBasicInfo(data);
-        if (result?.status === 200) setUserInfo(prev => prev ? { ...prev, name: data.name, lastname: data.lastName } : undefined)
+        if (result?.status === 200) setUserInfo(prev => prev ? { ...prev, name: data.name, lastname: data.lastName } : undefined);
+            
+        
     }
 
     const addAddress = async (data: FormAddAddressValues) => {
@@ -119,7 +122,10 @@ const Profile = () => {
         }
         
         const result = await callAddAddress(dataParsed);
-        if(result?.status === 200) callUserInfo();
+        if(result?.status === 200) {
+            callUserInfo();
+            setShowForm(prev => ({...prev, address: false}));
+        }
     }
 
     const deleteAddress = async (id: string) => {
@@ -130,6 +136,7 @@ const Profile = () => {
     // NOTE To capture the entry data
     useEffect(() => {
         setUserInfo(responseUserInfo?.data.user);
+        setAddressCount(responseUserInfo ? responseUserInfo.data.user.addresses.length : 0);
     }, [responseUserInfo]);
 
     // NOTE To capture communes
@@ -138,11 +145,13 @@ const Profile = () => {
     }, [responseAllCommune, responseUpdateBasicInfo]);
 
     // NOTE To controll the view of modal
+    // FIXME Bug rigth here when i delete an address
     useEffect(() => {
         if(responseUpdateBasicInfo) {
             showModal('resultUpdateBasicInfo');
         } 
         else if(responseAddAddress) {
+            console.log('enter');
             hideModal();
             showModal('resultAddAddress');
         } else if (responseDeleteAddress) {
@@ -302,6 +311,7 @@ const Profile = () => {
                             header = {
                                 <div className="flex gap-3 justify-between">
                                     <Text text="Addresses" color="black" size="2xl" typeText="strong"/>
+                                    <Text text={`${addressCount}/3`} color="black" size="2xl" typeText="strong"/>
                                     <div className="max-w-[100px]">
                                         <Button typeBtn="button" typeStyleBtn={showForm.address ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("address")} textBtn={showForm.address ? 'Cancel' : 'Add'} />
                                     </div>
@@ -370,9 +380,12 @@ const Profile = () => {
                                 ) : (
                                     <div className="flex flex-col gap-1">
                                         {responseUserInfo?.data.user.addresses.map((el, index) => (
-                                            <div key = {index} className="flex">
+                                            <div key = {index} className="flex gap-2">
                                                 {JSON.stringify(el)}
-                                                <Button typeBtn="button" typeStyleBtn="primary-red" onClickBtn={() => deleteAddress(el.id)} textBtn="delete" />
+                                                <div className="flex gap-3">
+                                                    <Button typeBtn="button" typeStyleBtn="primary-yellow" onClickBtn={() => console.log('Edit')} textBtn="Edit" />
+                                                    <Button typeBtn="button" typeStyleBtn="primary-red" onClickBtn={() => deleteAddress(el.id)} textBtn="Delete" />
+                                                </div>
                                             </div>
                                         ))}
                                     </div>

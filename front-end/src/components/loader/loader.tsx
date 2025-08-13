@@ -7,7 +7,7 @@ const Loader = ({ text, isFullScreen = true }: ILoader) => {
     return (
         <>  
             {isFullScreen && 
-                <div className="fixed z-100 bg-black opacity-70 size-full"></div>
+                <div className="fixed z-100 bg-black opacity-70 size-full top-0 left-0"></div>
             }
             
             <div className={`${isFullScreen ? 'fixed z-110 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2': '' } bg-gray-lightest flex flex-col gap-3 size-50  justify-center p-2 outline-4 outline-black-darkest border-t-4 border-l-4 border-gray-lighter`}>
