@@ -5,17 +5,32 @@ import Input from "../input/input.tsx";
 import Button from "../button/button.tsx";
 import Text from "../text/text.tsx";
 import { IErrorApi } from "../../models/types/api.model.ts";
+import { StyleForm, InputStyle, InputType } from "../../models/types/input.model.ts";
+import Select from "../select/select.tsx";
 
 type Mode = "onBlur" | "onChange" | "onSubmit" | "onTouched" | "all" | undefined;
-type StyleForm = 'primary' | 'secondary'
-type InputStyle = 'primary' | 'secondary';
+type FormType = InputProps | SelectPropts;
 
-interface InputProps {
+type OptionSelect = {
+    value: string | number;
+    label: string;
+}
+
+interface BaseFieldProps {
     name: string;
     label: string;
-    type: string;
-    inputStyle?: InputStyle;
+}
+
+interface SelectPropts extends BaseFieldProps {
+    type: 'select';
+    options: OptionSelect[];
+}
+interface InputProps extends BaseFieldProps{
+    type: Exclude<InputType, 'select'>;
     placeholder?: string;
+    inputStyle?: InputStyle;
+    min?: number;
+    max?: number;
 }
 
 interface FormProps<T extends ZodTypeAny> {
@@ -26,7 +41,7 @@ interface FormProps<T extends ZodTypeAny> {
     onSubmit: SubmitHandler<z.infer<T>>; 
     errorSubmit: IErrorApi | null;
     gridCols: number;
-    fields: InputProps[];
+    fields: Array<FormType>;
 }
 
 const Form = <T extends ZodTypeAny>({ styleForm, schema, mode, defaultValues, onSubmit, errorSubmit, gridCols, fields }: FormProps<T>) => { // ANCHOR T is a generic to which the schema gives structure
@@ -47,23 +62,42 @@ const Form = <T extends ZodTypeAny>({ styleForm, schema, mode, defaultValues, on
         3: 'md:grid-cols-3',
         4: 'md:grid-cols-4',
     }
+    const fieldToRender = (field: FormType, key: number) => {
+        switch (field.type) {
+            case 'select':
+                return(
+                    <Select 
+                        key={key}
+                        control={control}
+                        label={field.label}
+                        name={field.name as Path<z.infer<T>>}
+                        options={field.options}
+                        error={errors[field.name]}
+                    />
+                );
+            default:
+                return (
+                    <Input 
+                        key={key}
+                        name={field.name as Path<z.infer<T>>}
+                        control={control}
+                        label={field.label}
+                        type={field.type}
+                        inputStyle={field?.inputStyle}
+                        error = {errors[field.name]}
+                        placeholder={field.placeholder}
+                        max={field.max}
+                        min={field.min}
+                    />
+                )
+        }
+    }
 
     return (
         <form onSubmit = { handleSubmit(onSubmit) } className = {objStylesForm[styleForm]}>
             <div className={`grid grid-cols-1 ${objGridCols[gridCols]} gap-3`}>
                 {
-                    fields.map((element: InputProps, index: number) => (
-                        <Input
-                            key = {index}
-                            name = {element.name as Path<z.infer<T>>}
-                            control = {control}
-                            label = {element.label}
-                            type = {element.type}
-                            inputStyle={element.inputStyle}
-                            error = {errors[element.name]}
-                            placeholder={element.placeholder}
-                        />
-                    ))
+                    fields.map((element, index: number) => fieldToRender(element, index))
                 }
             </div>
             

@@ -1,20 +1,21 @@
 import { Control, Controller, DeepRequired, FieldErrorsImpl, Path } from "react-hook-form";
 import { z, ZodTypeAny } from "zod";
 import Text from "../text/text";
-
-type InputStyle = 'primary' | 'secondary';
+import { InputStyle } from "../../models/types/input.model";
 
 interface InputProps<T extends ZodTypeAny> {
     name: Path<z.infer<T>>;
     control: Control<z.infer<T>>;
     label: string;
     type: string;
+    min?: number;
+    max?: number;
     inputStyle?: InputStyle;
     placeholder?: string;
     error?: FieldErrorsImpl<DeepRequired<z.TypeOf<T>>>[string] | undefined
 }
 
-const Input = <T extends ZodTypeAny>({name, control, label, type, inputStyle = 'primary', placeholder, error} : InputProps<T>) => {
+const Input = <T extends ZodTypeAny>({name, control, label, type, inputStyle = 'primary', min, max, placeholder, error} : InputProps<T>) => {
     const stylesInput = {
         primary: 'bg-white py-1 px-2 text-black outline-4 outline-black border-t-4 border-l-4 border-gray-lighter transition-all duration-100',
         secondary: 'bg-grey py-1 px-2 text-white outline-4 outline-gray-lightest border-t-4 border-l-4 border-black-lighter transition-all duration-100',
@@ -44,6 +45,8 @@ const Input = <T extends ZodTypeAny>({name, control, label, type, inputStyle = '
                         {...field} // NOTE Spread operator, this give all the necesary configuration of the input to work with the form
                         className = {error ? stylesInput[`${inputStyle}-error`] : stylesInput[inputStyle]}
                         placeholder={placeholder}
+                        min={min}
+                        max={max}
                     />
                 )}
             />

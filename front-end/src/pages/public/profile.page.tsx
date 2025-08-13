@@ -65,16 +65,10 @@ const Profile = () => {
     const { 
         responseApi: responseUserInfo, 
         apiIsLoading: userInfoIsLoading,
-        errorApi: userInfoError
+        errorApi: userInfoError,
+        callApi: callUserInfo
     } = useApi<IResponseUser, undefined>(() => api.get('users/get-user'), true);
     const [userInfo, setUserInfo] = useState<IUserInfo | undefined>(undefined);
-
-    const { 
-        responseApi: responseAllRegion, 
-        apiIsLoading: allRegionIsLoading,
-        errorApi: allRegionError
-    } = useApi<IInfoRegionCommune, undefined>(() => api.get('address/all-regions'), true);
-    const [region, setRegion] = useState<Array<regionCommune> | undefined>(undefined);
 
     const { 
         responseApi: responseAllCommune, 
@@ -96,8 +90,8 @@ const Profile = () => {
         apiIsLoading: addAddressIsLoading,
         callApi: callAddAddress,
         errorApi: errorAddAddress
-    } = useApi((data) => api.post('/users/add-user-address', data))
-    const [userAddress, setUserAddress] = useState<Array<IAddress> | undefined>(undefined);
+    } = useApi<IInfoRegionCommune, unknown>((data) => api.post('/users/add-user-address', data));
+    
 
     const changeStatusForm = (option: options) => setShowForm(prev => ({ ...prev, [option]: !prev[option] }))
     
@@ -110,41 +104,39 @@ const Profile = () => {
         if (result?.status === 200) setUserInfo(prev => prev ? { ...prev, name: data.name, lastname: data.lastName } : undefined)
     }
 
-    const addAddress = (data: FormAddAddressValues) => {
-        callAddAddress(data);
+    const addAddress = async (data: FormAddAddressValues) => {
+        const dataParsed = {
+            ...data,
+            number: Number(data.number),
+            numDpto: Number(data.numDpto)
+        }
+        
+        const result = await callAddAddress(dataParsed);
+        if(result?.status === 200) callUserInfo();
     }
 
     // NOTE To capture the entry data
     useEffect(() => {
         setUserInfo(responseUserInfo?.data.user);
-        setUserAddress(responseUserInfo?.data.user.addresses);
     }, [responseUserInfo]);
-
-    // NOTE To capture regions
-    useEffect(() => {
-        setRegion(responseAllRegion?.data.data);
-    }, [responseAllRegion]);
 
     // NOTE To capture communes
     useEffect(() => {
         setCommune(responseAllCommune?.data.data);
-    }, [responseAllCommune])
+    }, [responseAllCommune, responseUpdateBasicInfo]);
 
     // NOTE To controll the view of modal
     useEffect(() => {
         if(responseUpdateBasicInfo) {
             showModal('resultUpdateBasicInfo');
+        } 
+        else if(responseAddAddress) {
+            hideModal();
+            showModal('resultAddAddress');
         }
-    }, [responseUpdateBasicInfo, showModal]);
-
-
-
-    useEffect(() => {
-        console.log('o => ', commune);
-    }, [commune])
+    }, [responseUpdateBasicInfo, responseAddAddress, showModal, hideModal]);
     
-
-    if (userInfoIsLoading || allRegionIsLoading || allCommuneIsLoading) {
+    if (userInfoIsLoading || allCommuneIsLoading) {
         return (
             <> 
                 <section className="flex mx-auto p-2 my-3">
@@ -158,12 +150,6 @@ const Profile = () => {
     if (userInfoError) {
         return (
             <h1>ERROR LOADING USER INFO {userInfoError.status} {userInfoError.error}</h1>
-        )
-    }
-
-    if (allRegionError) {
-        return (
-            <h1>ERROR LOADING all regions</h1>
         )
     }
 
@@ -195,6 +181,13 @@ const Profile = () => {
                 body={<Text text={`${responseUpdateBasicInfo?.data.message}`} color="black" size="base" typeText="em" />}
                 hideModal={hideModal}
                 isOpen = {modalIsOpen('resultUpdateBasicInfo')}
+            />
+
+            <Modal
+                header = {<Text text="Result for adding an address" color="black" size="lg" typeText="strong" />}
+                body={<Text text={`${responseAddAddress?.data.message}`} color="black" size="base" typeText="em" />}
+                hideModal={hideModal}
+                isOpen = {modalIsOpen('resultAddAddress')}
             />
 
             <section className="flex mx-auto p-2 my-3 gap-6">
@@ -280,7 +273,7 @@ const Profile = () => {
                 </div>
 
                 <div>
-                    {addAddressIsLoading ? (<Loader isFullScreen = {false} />) : (
+                    {addAddressIsLoading ? (<Loader text="Adding a new address" isFullScreen = {false} />) : (
                         <CardInfo 
                             header = {
                                 <div className="flex gap-3 justify-between">
@@ -297,17 +290,52 @@ const Profile = () => {
                                             mode="all"
                                             schema={addAddressSquema}
                                             onSubmit={addAddress}
-                                            defaultValues={{idCommune: 1, number: 0, postalCode: '', street: '', numDpto: 0}}
+                                            defaultValues={{idCommune: 0, number: '1', postalCode: '', street: '', numDpto: '1'}}
                                             errorSubmit={errorAddAddress}
                                             fields={[
-                                                
+                                                {
+                                                    type: 'select',
+                                                    label: 'Commune',
+                                                    name: 'idCommune',
+                                                    options: commune ? [{label: '------', value: 0}, ...commune.map(el => ({label: el.name, value: el.id})) ] : []
+                                                },
+                                                {
+                                                    type: 'number',
+                                                    label: 'House number',
+                                                    name: 'number',
+                                                    inputStyle: 'primary',
+                                                    placeholder: 'Insert number',
+                                                    min: 1
+                                                },
+                                                {
+                                                    type: 'text',
+                                                    label: 'Postal code',
+                                                    name: 'postalCode',
+                                                    inputStyle: 'primary',
+                                                    placeholder: 'Insert postal code'
+                                                },
+                                                {
+                                                    type: 'text',
+                                                    label: 'Street',
+                                                    name: 'street',
+                                                    inputStyle: 'primary',
+                                                    placeholder: 'Insert street'
+                                                },
+                                                {
+                                                    type: 'number',
+                                                    label: 'Num dpto',
+                                                    name: 'numDpto',
+                                                    inputStyle: 'primary',
+                                                    placeholder: 'Insert Num dpto',
+                                                    min: 1
+                                                }
                                             ]}
                                             gridCols={1}
                                             styleForm="primary"
                                         />
 
                                         <div className="flex flex-col gap-1">
-                                            {userAddress?.map((el, index) => (
+                                            {responseUserInfo?.data.user.addresses.map((el, index) => (
                                                 <div key = {index}>
                                                     {JSON.stringify(el)}
                                                 </div>
@@ -317,7 +345,7 @@ const Profile = () => {
                                       
                                 ) : (
                                     <div className="flex flex-col gap-1">
-                                        {userAddress?.map((el, index) => (
+                                        {responseUserInfo?.data.user.addresses.map((el, index) => (
                                             <div key = {index}>
                                                 {JSON.stringify(el)}
                                             </div>

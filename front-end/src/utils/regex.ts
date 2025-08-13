@@ -5,5 +5,6 @@ export const regexAtLeastOneSpecialCharacter = /[_@#$!¡.-]/
 export const regexAtleastOneLetter = /[a-zA-Z]/
 export const regexOnlyLetter = /^[a-zA-Z]+$/
 export const regexOnlyLettersAndNumbers = /^[a-zA-Z0-9]+$/
+export const regexOnlyNumbers = /^[0-9]+$/
 export const regexOnlyLetterAndSpaces = /^[a-zA-Záéíóú ]+$/
 export const regexOrderQuery = /^(asc|desc)\([a-zA-Z_]+\)(,(asc|desc)\([a-zA-Z_]+\))*$/
