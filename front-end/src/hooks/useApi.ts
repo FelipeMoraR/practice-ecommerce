@@ -1,6 +1,6 @@
 import { AxiosError, AxiosResponse } from "axios";
 import { useEffect, useState, useCallback } from "react";
-import { IErrorApi } from "../models/types/api.model";
+import { ErrorApi, IErrorApi } from "../models/types/api.model";
 
 // FIXME add a limiter per minute
 const useApi = <T, D>(promiseFn: (data?: D) => Promise<AxiosResponse<T>>, autoCall: boolean = false) => { // ANCHOR when you pass a promise as a parameter the promise will be executed anyways so we have to send a function that execute the promise not the promise it self
@@ -22,13 +22,14 @@ const useApi = <T, D>(promiseFn: (data?: D) => Promise<AxiosResponse<T>>, autoCa
           status: error.response.status,
           error: error.response.data.message
         });
-        return;
+        return new ErrorApi(error.response.status, error.response.data.message)
       }
       const message = error instanceof Error ? error.message : String(error);
       setErrorApi({
         status: 500,
         error: message
       });
+      return new ErrorApi(500, message)
     } finally {
       setApiIsLoading(false);
     }

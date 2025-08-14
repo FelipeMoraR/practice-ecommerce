@@ -4,14 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import useApi from "../../hooks/useApi";
 import { UseAxiosContext } from "../../contexts/axios.context";
 import Loader from "../../components/loader/loader";
-import { IApi } from "../../models/types/api.model";
+import { IApi, ErrorApi } from "../../models/types/api.model";
 import Button from "../../components/button/button";
 import Form from "../../components/form/form";
 import { updateBasicUserInfoSchema, FormUpdateBasicUserInfoValues } from "../../models/schemas/updateBasicUserInfo.schema.model";
 import { addAddressSquema, FormAddAddressValues } from "../../models/schemas/addAddress.schema.model";
 import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
-
 
 type options = 'basicInfo' | 'phone' | 'password' | 'address';
 
@@ -27,6 +26,11 @@ type IUserInfo = {
 type regionCommune = {
     id: number;
     name: string
+}
+
+type responseModal = {
+    title: string;
+    body: string;
 }
 
 interface IInfoRegionCommune extends IApi {
@@ -56,7 +60,10 @@ interface IAddress {
 const Profile = () => {
     const { api } = UseAxiosContext();
     const { showModal, hideModal, modalIsOpen } = useModal();
-    const [addressCount, setAddressCount] = useState<number>(0);
+    const [ addressCount, setAddressCount ] = useState<number>(0);
+    const [ addressToEdit, setAddressToEdit ] = useState<Array<number>>([]);
+    const [ textModalResult, setTextModalResult ] = useState<responseModal | null>(null);
+    
     const [showForm, setShowForm] = useState<ISectionToUpdate>({
         basicInfo: false,
         phone: false,
@@ -80,7 +87,6 @@ const Profile = () => {
     const [commune, setCommune] = useState<Array<regionCommune> | undefined>(undefined);
 
     const {
-        responseApi: responseUpdateBasicInfo,
         apiIsLoading: UpdateBasicInfoIsLoading,
         callApi: callUpdateBasicInfo,
         errorApi: errorUpdateBasicInfo
@@ -88,18 +94,20 @@ const Profile = () => {
     const updatedBasicInfoConfirmed = useRef<boolean>(false);
 
     const {
-        responseApi: responseAddAddress,
         apiIsLoading: addAddressIsLoading,
         callApi: callAddAddress,
         errorApi: errorAddAddress
     } = useApi<IInfoRegionCommune, unknown>((data) => api.post('/users/add-user-address', data));
     
     const {
-        responseApi: responseDeleteAddress,
         apiIsLoading: deleteAddressIsLoading,
         callApi: callDeleteAddress,
-        errorApi: errorDeleteAddress
-    } = useApi((idAddress) => api.delete(`/users/delete-user-address/${idAddress}`));
+    } = useApi<IApi, unknown>((idAddress) => api.delete(`/users/delete-user-address/${idAddress}`));
+
+    const customHideModal = () => {
+        hideModal();
+        setTextModalResult(null);
+    }
 
     const changeStatusForm = (option: options) => setShowForm(prev => ({ ...prev, [option]: !prev[option] }))
     
@@ -109,8 +117,25 @@ const Profile = () => {
             return
         }
         const result = await callUpdateBasicInfo(data);
-        if (result?.status === 200) setUserInfo(prev => prev ? { ...prev, name: data.name, lastname: data.lastName } : undefined);
-        showModal('resultUpdateBasicInfo');
+        if(result instanceof ErrorApi) {
+            setTextModalResult({
+                title: 'Error updating basic data',
+                body: result.error
+            });
+            showModal('resultResponse');
+            return;
+        }
+        if (result?.status === 200) {
+            setUserInfo(prev => prev ? { ...prev, name: data.name, lastname: data.lastName } : undefined);
+            setShowForm(prev => ({...prev, basicInfo: false }));
+            setTextModalResult({
+                title: 'Result updating basic data',
+                body: result.data.message
+            });
+            showModal('resultResponse');
+            return;
+        }
+        
     }
 
     const addAddress = async (data: FormAddAddressValues) => {
@@ -121,17 +146,50 @@ const Profile = () => {
         }
         
         const result = await callAddAddress(dataParsed);
-        if(result?.status === 200) {
+        if(result instanceof ErrorApi){
+            console.log('enter to the error XDD');
+            setTextModalResult({
+                title: 'Error adding an address',
+                body: result.error
+            });
+            showModal('resultResponse');
+            return;
+        }
+        if(result.status === 200) {
+            // NOTE I refresh the info of the user because i need the correct id of the address.
+            // FIXME the backend must return the address added to avoid this bellow.
             callUserInfo();
             setShowForm(prev => ({...prev, address: false}));
+            setTextModalResult({
+                title: 'Result adding an address',
+                body: result.data.message
+            });
+            showModal('resultResponse');
+            return;
         }
-        showModal('resultAddAddress');
+        
     }
 
     const deleteAddress = async (id: string) => {
         const result = await callDeleteAddress(id);
-        if(result?.status === 200) callUserInfo();
-        showModal('resultDeleteAddress');
+        if(result instanceof ErrorApi) {
+            setTextModalResult({
+                title: 'Result deleting address',
+                body: result.error
+            });
+            showModal('resultResponse');
+            return;
+        }
+        if(result.status === 200){
+            callUserInfo();
+            setTextModalResult({
+                title: 'Result deleting address',
+                body: result.data.message
+            });
+            showModal('resultResponse');
+            return;
+        }
+        
     }
     
     // NOTE To capture the entry data
@@ -143,8 +201,13 @@ const Profile = () => {
     // NOTE To capture communes
     useEffect(() => {
         setCommune(responseAllCommune?.data.data);
-    }, [responseAllCommune, responseUpdateBasicInfo]);
-    
+    }, [responseAllCommune]);
+
+    // NOTE Controll error updating basic data user
+    useEffect(() => {
+        if(errorUpdateBasicInfo && errorUpdateBasicInfo.status === 403) setShowForm(prev => ({...prev, basicInfo: false}));
+    }, [errorUpdateBasicInfo])
+
     if (userInfoIsLoading || allCommuneIsLoading) {
         return (
             <> 
@@ -184,38 +247,24 @@ const Profile = () => {
                 hideModal={hideModal} 
                 isOpen={modalIsOpen('updateBasicInfoModal')} 
             />
-            {/* NOTE Look at the pattern, this can be just one modal */}
+            
             <Modal
-                header = {<Text text="Result updating basic information user" color="black" size="lg" typeText="strong" />}
-                body={<Text text={`${responseUpdateBasicInfo?.data.message}`} color="black" size="base" typeText="em" />}
-                hideModal={hideModal}
-                isOpen = {modalIsOpen('resultUpdateBasicInfo')}
-            />
-
-            <Modal
-                header = {<Text text="Result for adding an address" color="black" size="lg" typeText="strong" />}
-                body={<Text text={`${responseAddAddress?.data.message}`} color="black" size="base" typeText="em" />}
-                hideModal={hideModal}
-                isOpen = {modalIsOpen('resultAddAddress')}
-            />
-
-            <Modal
-                header = {<Text text="Result deleting address" color="black" size="lg" typeText="strong" />}
-                body={<Text text={`${responseDeleteAddress?.data.message}`} color="black" size="base" typeText="em" />}
-                hideModal={hideModal}
-                isOpen = {modalIsOpen('resultDeleteAddress')}
+                header = {<Text text={textModalResult ? textModalResult.title : ''} color="black" size="lg" typeText="strong" />}
+                body={<Text text={textModalResult ? textModalResult.body : ''} color="black" size="base" typeText="em" />}
+                hideModal={customHideModal}
+                isOpen = {modalIsOpen('resultResponse')}
             />
 
             <section className="flex mx-auto p-2 my-3 gap-6">
                 <Text text="Profile" color="black" size="3xl" typeText="h1"/>
                 <div>
-                    { UpdateBasicInfoIsLoading ? (<Loader isFullScreen = {false} />) : (
+                    { UpdateBasicInfoIsLoading ? (<Loader isFullScreen = {false} text="Updating values" />) : (
                         <CardInfo 
                             header = {
                                 <div className="flex gap-3 justify-between">
                                     <Text text="Basic information" color="black" size="2xl" typeText="strong"/>
                                     <div className="max-w-[100px]">
-                                        <Button typeBtn="button" typeStyleBtn={showForm.basicInfo ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("basicInfo")} textBtn={showForm.basicInfo ? 'Cancel' : 'Update'} />
+                                        <Button typeBtn="button"  typeStyleBtn={showForm.basicInfo ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("basicInfo")} textBtn={showForm.basicInfo ? 'Cancel' : 'Update'} disabled = {errorUpdateBasicInfo && errorUpdateBasicInfo.status === 403 ? true : false } />
                                     </div>
                                 </div>
                             }
@@ -290,7 +339,6 @@ const Profile = () => {
 
                 <div>
                     {deleteAddressIsLoading && (<Loader text="Deleting address"/>)}
-                    {errorDeleteAddress && (<h1>ERROOOOOOOOOOOR {errorAddAddress?.error}</h1>)}
                     {addAddressIsLoading ? (<Loader text="Adding a new address" isFullScreen = {false} />) : (
                         <CardInfo 
                             header = {
@@ -298,7 +346,7 @@ const Profile = () => {
                                     <Text text="Addresses" color="black" size="2xl" typeText="strong"/>
                                     <Text text={`${addressCount}/3`} color="black" size="2xl" typeText="strong"/>
                                     <div className="max-w-[100px]">
-                                        <Button typeBtn="button" typeStyleBtn={showForm.address ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("address")} textBtn={showForm.address ? 'Cancel' : 'Add'} />
+                                        <Button typeBtn="button" typeStyleBtn={showForm.address ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("address")} disabled = {addressCount >= 3} textBtn={showForm.address ? 'Cancel' : 'Add'} />
                                     </div>
                                 </div> 
                             }
@@ -364,15 +412,41 @@ const Profile = () => {
                                       
                                 ) : (
                                     <div className="flex flex-col gap-1">
-                                        {responseUserInfo?.data.user.addresses.map((el, index) => (
-                                            <div key = {index} className="flex gap-2">
-                                                {JSON.stringify(el)}
-                                                <div className="flex gap-3">
-                                                    <Button typeBtn="button" typeStyleBtn="primary-yellow" onClickBtn={() => console.log('Edit')} textBtn="Edit" />
-                                                    <Button typeBtn="button" typeStyleBtn="primary-red" onClickBtn={() => deleteAddress(el.id)} textBtn="Delete" />
-                                                </div>
-                                            </div>
-                                        ))}
+                                        {responseUserInfo?.data.user.addresses.map((el, index) => {
+                                            if(addressToEdit.some(edit => edit === index)) {
+                                                return (
+                                                    <div>
+                                                        <h1>editing XD</h1>
+                                                        <Button 
+                                                            typeBtn="button" 
+                                                            typeStyleBtn="primary-red" 
+                                                            onClickBtn={() => setAddressToEdit(prev => prev.filter(el => el !== index))} 
+                                                            textBtn="Cancel"
+                                                        />
+                                                    </div>
+                                                )
+                                            } else {
+                                                return (
+                                                    <div key = {index} className={`flex gap-2 ${index}`}>
+                                                        {JSON.stringify(el)}
+                                                        <div className="flex gap-3">
+                                                            <Button 
+                                                                typeBtn="button" 
+                                                                typeStyleBtn="primary-yellow" 
+                                                                onClickBtn={() => setAddressToEdit(prev => [...prev, index])} 
+                                                                textBtn="Edit" 
+                                                            />
+                                                            <Button 
+                                                                typeBtn="button" 
+                                                                typeStyleBtn="primary-red" 
+                                                                onClickBtn={() => deleteAddress(el.id)} 
+                                                                textBtn="Delete" 
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )
+                                            }
+                                        })}
                                     </div>
                                 )
                             }
