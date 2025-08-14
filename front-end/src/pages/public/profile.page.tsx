@@ -8,7 +8,7 @@ import { IApi, ErrorApi } from "../../models/types/api.model";
 import Button from "../../components/button/button";
 import Form from "../../components/form/form";
 import { updateBasicUserInfoSchema, FormUpdateBasicUserInfoValues } from "../../models/schemas/updateBasicUserInfo.schema.model";
-import { addAddressSquema, FormAddAddressValues } from "../../models/schemas/addAddress.schema.model";
+import { addressSquema, FormAddAddressValues, updateAddressSquema, FormUpdateAddressValues } from "../../models/schemas/address.schema.model";
 import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
 
@@ -54,7 +54,7 @@ interface IAddress {
     number: number;
     numDpto: number;
     postalCode: string;
-    idCommune: number;
+    commune: {id: number, name: string};
 }
 
 const Profile = () => {
@@ -104,6 +104,12 @@ const Profile = () => {
         callApi: callDeleteAddress,
     } = useApi<IApi, unknown>((idAddress) => api.delete(`/users/delete-user-address/${idAddress}`));
 
+    const {
+        apiIsLoading: updateAddressIsLoading,
+        callApi: callUpdateAddress,
+        errorApi: errorUpdateAddress
+    } = useApi<IInfoRegionCommune, unknown>((data) => api.patch('/users/update-user-address', data));
+    
     const customHideModal = () => {
         hideModal();
         setTextModalResult(null);
@@ -147,7 +153,6 @@ const Profile = () => {
         
         const result = await callAddAddress(dataParsed);
         if(result instanceof ErrorApi){
-            console.log('enter to the error XDD');
             setTextModalResult({
                 title: 'Error adding an address',
                 body: result.error
@@ -192,6 +197,36 @@ const Profile = () => {
         
     }
     
+    const updateAddress = async (data: FormUpdateAddressValues) => {
+        const dataParsed = {
+            ...data,
+            number: Number(data.number),
+            numDpto: Number(data.numDpto)
+        }
+        
+        const result = await callUpdateAddress(dataParsed);
+        if(result instanceof ErrorApi){
+            setTextModalResult({
+                title: 'Error updating address',
+                body: result.error
+            });
+            showModal('resultResponse');
+            return;
+        }
+        if(result.status === 200) {
+            // NOTE I refresh the info of the user because i need the correct id of the address.
+            // FIXME the backend must return the address added to avoid this bellow.
+            callUserInfo();
+            setShowForm(prev => ({...prev, address: false}));
+            setTextModalResult({
+                title: 'Result updating address',
+                body: result.data.message
+            });
+            showModal('resultResponse');
+            return;
+        }
+    }
+
     // NOTE To capture the entry data
     useEffect(() => {
         setUserInfo(responseUserInfo?.data.user);
@@ -346,7 +381,7 @@ const Profile = () => {
                                     <Text text="Addresses" color="black" size="2xl" typeText="strong"/>
                                     <Text text={`${addressCount}/3`} color="black" size="2xl" typeText="strong"/>
                                     <div className="max-w-[100px]">
-                                        <Button typeBtn="button" typeStyleBtn={showForm.address ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("address")} disabled = {addressCount >= 3} textBtn={showForm.address ? 'Cancel' : 'Add'} />
+                                        <Button typeBtn="button" typeStyleBtn={showForm.address ? 'primary-red' : addressCount >= 3 ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("address")} disabled = {addressCount >= 3} textBtn={showForm.address ? 'Cancel' : 'Add'} />
                                     </div>
                                 </div> 
                             }
@@ -355,16 +390,16 @@ const Profile = () => {
                                     <div className="flex flex-col gap-3">
                                         <Form
                                             mode="all"
-                                            schema={addAddressSquema}
+                                            schema={addressSquema}
                                             onSubmit={addAddress}
-                                            defaultValues={{idCommune: 0, number: '1', postalCode: '', street: '', numDpto: '1'}}
+                                            defaultValues={{idCommune: 0, number: '1', postalCode: '', street: '', numDpto: ''}}
                                             errorSubmit={errorAddAddress}
                                             fields={[
                                                 {
                                                     type: 'select',
                                                     label: 'Commune',
                                                     name: 'idCommune',
-                                                    options: commune ? [{label: '------', value: 0}, ...commune.map(el => ({label: el.name, value: el.id})) ] : []
+                                                    options: commune ? [{label: '------', value: 0}, ...commune.map(el => ({label: el.name, value: el.id, selected: false })) ] : []
                                                 },
                                                 {
                                                     type: 'number',
@@ -411,12 +446,59 @@ const Profile = () => {
                                     </div>
                                       
                                 ) : (
-                                    <div className="flex flex-col gap-1">
+                                    <div className="flex flex-col gap-3">
+                                        {updateAddressIsLoading && <Loader text="Updating address" isFullScreen = {false} />}
                                         {responseUserInfo?.data.user.addresses.map((el, index) => {
                                             if(addressToEdit.some(edit => edit === index)) {
                                                 return (
-                                                    <div>
-                                                        <h1>editing XD</h1>
+                                                    <div key={index}>
+                                                        <Form
+                                                            mode="all"
+                                                            schema={updateAddressSquema}
+                                                            onSubmit={updateAddress}
+                                                            defaultValues={{idAddress: el.id, idCommune: el.commune.id, number: `${el.number}`, postalCode: `${el.postalCode}`, street: el.street, numDpto: `${el.numDpto}`}}
+                                                            errorSubmit={errorUpdateAddress}
+                                                            fields={[
+                                                                {
+                                                                    type: 'select',
+                                                                    label: 'Commune',
+                                                                    name: 'idCommune',
+                                                                    options: commune ? [{label: '------', value: 0}, ...commune.map(el => ({label: el.name, value: el.id})) ] : []
+                                                                },
+                                                                {
+                                                                    type: 'number',
+                                                                    label: 'House number',
+                                                                    name: 'number',
+                                                                    inputStyle: 'primary',
+                                                                    placeholder: 'Insert number',
+                                                                    min: 1
+                                                                },
+                                                                {
+                                                                    type: 'text',
+                                                                    label: 'Postal code',
+                                                                    name: 'postalCode',
+                                                                    inputStyle: 'primary',
+                                                                    placeholder: 'Insert postal code'
+                                                                },
+                                                                {
+                                                                    type: 'text',
+                                                                    label: 'Street',
+                                                                    name: 'street',
+                                                                    inputStyle: 'primary',
+                                                                    placeholder: 'Insert street'
+                                                                },
+                                                                {
+                                                                    type: 'number',
+                                                                    label: 'Num dpto',
+                                                                    name: 'numDpto',
+                                                                    inputStyle: 'primary',
+                                                                    placeholder: 'Insert Num dpto',
+                                                                    min: 1
+                                                                }
+                                                            ]}
+                                                            gridCols={1}
+                                                            styleForm="primary"
+                                                        />
                                                         <Button 
                                                             typeBtn="button" 
                                                             typeStyleBtn="primary-red" 
@@ -428,6 +510,34 @@ const Profile = () => {
                                             } else {
                                                 return (
                                                     <div key = {index} className={`flex gap-2 ${index}`}>
+                                                        <Modal 
+                                                            header = {<Text text="Are you shure?" color="black" size="2xl" typeText="strong"/>}
+                                                            body = {
+                                                                <div className="flex flex-col gap-2">
+                                                                    <Text text="To delete this address?" color="black" size="base" typeText="em"/>
+                                                                    <div className="flex gap-3">
+                                                                        <Button 
+                                                                            typeBtn="button" 
+                                                                            typeStyleBtn="primary-green" 
+                                                                            onClickBtn={() => {
+                                                                                hideModal();
+                                                                                deleteAddress(el.id)
+                                                                            }} 
+                                                                            textBtn="Yes" 
+                                                                        />
+
+                                                                        <Button 
+                                                                            typeBtn="button" 
+                                                                            typeStyleBtn="primary-red" 
+                                                                            onClickBtn={hideModal} 
+                                                                            textBtn="No" 
+                                                                        />
+                                                                    </div>
+                                                                </div>
+                                                            }
+                                                            hideModal={hideModal}
+                                                            isOpen = {modalIsOpen(`delete${el.id}`)}
+                                                        />
                                                         {JSON.stringify(el)}
                                                         <div className="flex gap-3">
                                                             <Button 
@@ -439,7 +549,7 @@ const Profile = () => {
                                                             <Button 
                                                                 typeBtn="button" 
                                                                 typeStyleBtn="primary-red" 
-                                                                onClickBtn={() => deleteAddress(el.id)} 
+                                                                onClickBtn={() => showModal(`delete${el.id}`)} 
                                                                 textBtn="Delete" 
                                                             />
                                                         </div>
