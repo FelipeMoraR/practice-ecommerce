@@ -513,7 +513,7 @@ export const viewUserController = async (req, res) => {
       if (!userInfo.useraddresses) return userInfoParsed
 
       const addressesParsed = userInfo.useraddresses.map(addrs => {
-        const addressToSave = { id: addrs.address.id, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: addrs.address.commune.name }
+        const addressToSave = { id: addrs.address.id, street: addrs.address.street, number: addrs.address.number, numDpto: addrs.address.numDpto, postalCode: addrs.address.postalCode, commune: { id: addrs.address.commune.id, name: addrs.address.commune.name } }
         return addressToSave
       })
 
@@ -639,6 +639,7 @@ export const updateUserPasswordController = async (req, res) => {
       // NOTE If no session is up
       if (allTokenWhiteList.length <= 0) return
 
+      // NOTE Banning all old white tokens
       const destroyAllTokenWhiteListPromise = TokenWhiteList.destroy({ where: { fk_id_user: id } })
       const addBlackListTokenPromise = allTokenWhiteList.map(el => {
         const randomId = crypto.randomUUID()
@@ -648,7 +649,11 @@ export const updateUserPasswordController = async (req, res) => {
       await Promise.all([...addBlackListTokenPromise, destroyAllTokenWhiteListPromise])
     })
 
-    return res.status(200).send({ status: 200, message: 'Password changed!' })
+    return res.status(200)
+      .clearCookie('access_token')
+      .clearCookie('refresh_token')
+      .clearCookie('id_device')
+      .send({ status: 200, message: 'Password changed!' })
   } catch (error) {
     console.log('updateUserPasswordController: ', error)
     if (error instanceof HttpError) return res.status(error.statusCode).send({ status: error.statusCode, message: error.message })
@@ -689,19 +694,20 @@ export const addUserAddressController = async (req, res) => {
         throw new HttpError('That address was already saved', 409)
       }
 
-      const postalCodeResponse = await handlerGetPostalCode(street, number, comunneExist.name)
+      // FIXME Troubles with the conection.
+      // const postalCodeResponse = await handlerGetPostalCode(street, number, comunneExist.name)
 
-      if (!postalCodeResponse || postalCodeResponse.status) {
-        const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
-        const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
-        await saveLogController('ERROR', postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code', user.email, ip)
-        throw new HttpError(errorMessage, errorStatus)
-      }
+      // if (!postalCodeResponse || postalCodeResponse.status) {
+      //   const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
+      //   const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+      //   await saveLogController('ERROR', postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code', user.email, ip)
+      //   throw new HttpError(errorMessage, errorStatus)
+      // }
 
-      if (postalCode !== postalCodeResponse.codigoPostal) {
-        await saveLogController('ERROR', 'User sent an invalid postal code', user.email, ip)
-        throw new HttpError('Postal code provided not valid', 403)
-      }
+      // if (postalCode !== postalCodeResponse.codigoPostal) {
+      //   await saveLogController('ERROR', 'User sent an invalid postal code', user.email, ip)
+      //   throw new HttpError('Postal code provided not valid', 403)
+      // }
 
       const idAddress = crypto.randomUUID()
       const newUserAddress = await Address.create({ id: idAddress, street, number, numDpto, postalCode, fk_id_commune: idCommune })
@@ -769,21 +775,21 @@ export const updateUserAddressController = async (req, res) => {
         valuesToUpdate.fk_id_commune = newCommuneExist.id
       }
 
-      if (street || number || postalCode || newCommuneExist) {
-        const postalCodeResponse = await handlerGetPostalCode(valuesToUpdate.street, valuesToUpdate.number, newCommuneExist ? newCommuneExist.name : userAddressExist.address.commune.name)
+      // if (street || number || postalCode || newCommuneExist) {
+      //   const postalCodeResponse = await handlerGetPostalCode(valuesToUpdate.street, valuesToUpdate.number, newCommuneExist ? newCommuneExist.name : userAddressExist.address.commune.name)
 
-        if (!postalCodeResponse || postalCodeResponse.status) {
-          const errorMessage = postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code'
-          const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
-          await saveLogController('ERROR', postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code', user.email, ip)
-          throw new HttpError(errorMessage, errorStatus)
-        }
+      //   if (!postalCodeResponse || postalCodeResponse.status) {
+      //     const errorMessage = postalCodeResponse ? `${postalCodeResponse.error}. Please verify your postal code and full direction` : 'Error getting postal code'
+      //     const errorStatus = postalCodeResponse && postalCodeResponse.status ? postalCodeResponse.status : 500
+      //     await saveLogController('ERROR', postalCodeResponse ? postalCodeResponse.error : 'Error getting postal code', user.email, ip)
+      //     throw new HttpError(errorMessage, errorStatus)
+      //   }
 
-        if (valuesToUpdate.postalCode !== postalCodeResponse.codigoPostal) {
-          await saveLogController('ERROR', 'User sent an invalid postal code', user.email, ip)
-          throw new HttpError('Postal code provided not valid', 403)
-        }
-      }
+      //   if (valuesToUpdate.postalCode !== postalCodeResponse.codigoPostal) {
+      //     await saveLogController('ERROR', 'User sent an invalid postal code', user.email, ip)
+      //     throw new HttpError('Postal code provided not valid', 403)
+      //   }
+      // }
 
       await Address.update(valuesToUpdate, { where: { id: idAddress } })
       await saveLogController('INGO', 'User updated an address', user.email, ip)
