@@ -12,6 +12,8 @@ import { addressSquema, FormAddAddressValues, updateAddressSquema, FormUpdateAdd
 import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
 import { updateProfilePasswordSchema, FormUpdateProfilePassword } from "../../models/schemas/profileUpdatePassword.schema";
+import { updatePhoneSchema, FormUpdatePhone } from "../../models/schemas/phone.schema.model";
+
 
 type options = 'basicInfo' | 'phone' | 'password' | 'address';
 
@@ -117,6 +119,12 @@ const Profile = () => {
         errorApi: errorUpdatePassword
     } = useApi<IApi, unknown>((data) => api.patch('/users/update-password-user', data));
     const updatedProfilePassword = useRef<boolean>(false);
+
+    const {
+        apiIsLoading: updatePhoneIsLoading,
+        callApi: callUpdatePhone,
+        errorApi: errorUpdatePhone
+    } = useApi<IApi, unknown>((data) => api.put('/users/update-user-phone', data));
 
     const customHideModal = () => {
         hideModal();
@@ -243,7 +251,7 @@ const Profile = () => {
         const result = await callUpdatePassword(data);
         if(result instanceof ErrorApi){
             setTextModalResult({
-                title: 'Error updating address',
+                title: 'Error updating password',
                 body: result.error
             });
             showModal('resultResponse');
@@ -263,6 +271,29 @@ const Profile = () => {
                 window.location.href = '/login';
             }, 2000)
 
+            return;
+        }
+    }
+
+    const updatePhone = async (data: FormUpdatePhone) => {
+        const result = await callUpdatePhone(data);
+        if(result instanceof ErrorApi){
+            setTextModalResult({
+                title: 'Error updating phone',
+                body: result.error
+            });
+            showModal('resultResponse');
+            updatedProfilePassword.current = false;
+            return;
+        }
+        if(result.status === 200) {
+            callUserInfo();
+            setShowForm(prev => ({...prev, phone: false}));
+            setTextModalResult({
+                title: 'Result updating phone',
+                body: result.data.message
+            });
+            showModal('resultResponse');
             return;
         }
     }
@@ -684,6 +715,51 @@ const Profile = () => {
                             typeCard={1}
                         />
                     )}
+                </div>
+
+                <div>
+                    { updatePhoneIsLoading ? (<Loader isFullScreen = {false} text="Updating phone" />) : (
+                        <CardInfo 
+                            header = {
+                                <div className="flex gap-3 justify-between">
+                                    <Text text="Phone" color="black" size="2xl" typeText="strong"/>
+                                    <div className="max-w-[100px]">
+                                        <Button typeBtn="button"  typeStyleBtn={showForm.phone ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("phone")} textBtn={showForm.phone ? 'Cancel' : 'Update'} />
+                                    </div>
+                                </div>
+                            }
+                            body = {
+                                showForm.phone ? (
+                                    <div className="flex flex-col gap-2">
+                                        <Form
+                                            mode="all"
+                                            schema={updatePhoneSchema}
+                                            onSubmit={updatePhone}
+                                            defaultValues={userInfo?.phone ? {phone: userInfo.phone} : {phone: ''}}
+                                            errorSubmit={errorUpdatePhone}
+                                            fields={[
+                                                {
+                                                    name: 'phone',
+                                                    label: 'Phone',
+                                                    type: 'text',
+                                                    placeholder: 'Insert your phone number'
+                                                },
+                                            ]}
+                                            gridCols={1}
+                                            styleForm="primary"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-1">
+                                        <Text text="Phone: " color="black" size="lg" typeText="strong"/>
+                                        <Text text={userInfo ? userInfo.phone ? userInfo.phone : 'No phone added' : 'Error loading data'} color="black" size="base" typeText="p"/>
+                                    </div>
+                                )
+                            }
+                            typeCard={1}
+                        />
+                    )}
+                    
                 </div>
             </section>
         </>
