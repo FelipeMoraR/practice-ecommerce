@@ -52,8 +52,8 @@ const Form = <T extends ZodTypeAny>({ styleForm, schema, mode, defaultValues, on
     })
 
     const objStylesForm = {
-        primary: 'bg-gray-lightest relative outline-4 outline-black-darkest border-t-4 border-l-4 border-black-lighter p-4 flex flex-col gap-2 min-w-[250px] max-w-[500px]',
-        secondary: 'bg-gray-darker relative outline-4 outline-black-darkest border-t-4 border-l-4 border-gray-darkest p-4 flex flex-col gap-2 min-w-[250px] max-w-[500px]'
+        primary: 'bg-gray-lightest relative outline-4 outline-black-darkest border-t-4 border-l-4 border-black-lighter p-4 flex flex-col gap-2 min-w-[250px] w-full',
+        secondary: 'bg-gray-darker relative outline-4 outline-black-darkest border-t-4 border-l-4 border-gray-darkest p-4 flex flex-col gap-2 min-w-[250px] w-full'
     }
 
     const objGridCols: { [key: number]: string } = {

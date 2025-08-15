@@ -39,7 +39,7 @@
 }
 
 .fade-in {
-    animation: fadeIn 500ms linear forwards;
+    animation: fadeIn 200ms linear forwards;
 }
 
 .delay-c-100 {
