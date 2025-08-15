@@ -626,6 +626,13 @@ export const updateUserPasswordController = async (req, res) => {
         await saveLogController('WARNING', 'User tried to change password and failed', user.email, ip)
         throw new HttpError('Old password not valid', 401)
       }
+
+      const newPasswordIsNotNew = await bcrypt.compare(newPassword, user.password)
+      if (newPasswordIsNotNew) {
+        await saveLogController('AUDIT', 'Attempt to use the old password to change password', user.email, ip)
+        throw new HttpError('New password have to be new', 422)
+      }
+
       // NOTE Extract the actual time
       const now = await handlerExtractUtcTimestamp()
 
