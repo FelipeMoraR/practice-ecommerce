@@ -10,15 +10,18 @@ const setupLoggedInterceptors = (axiosInstance: AxiosInstance) => {
         (response) => response,
         async (error) => {
             const originalRequest = error.config;
-        
+            
+            // NOTE Verify if there are a red error;
+            if (!error.response) {
+                return Promise.reject(error);
+            }
+            
             // NOTE Avoit infinite loop
-            if(error.retry) return Promise.reject(error);
-
-            error.retry = true;
-           
+            if(originalRequest.retry) return Promise.reject(error);
+            
             if (error.response?.status === 401) {
                 console.log('Unauth token, drinking water....');
-
+                originalRequest.retry = true;
                 try {
                     await axiosInstance.get('/sessions/refresh-access-token');
                     
