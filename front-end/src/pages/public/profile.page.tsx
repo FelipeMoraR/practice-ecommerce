@@ -1,35 +1,22 @@
 import Text from "../../components/text/text";
-import CardInfo from "../../components/cardInfo/cardInfo";
 import { useEffect, useRef, useState } from "react";
 import useApi from "../../hooks/useApi";
 import { UseAxiosContext } from "../../contexts/axios.context";
 import Loader from "../../components/loader/loader";
 import { IApi, ErrorApi } from "../../models/types/api.model";
 import Button from "../../components/button/button";
-import Form from "../../components/form/form";
-import { updateBasicUserInfoSchema, FormUpdateBasicUserInfoValues } from "../../models/schemas/updateBasicUserInfo.schema.model";
-import { addressSquema, FormAddAddressValues, updateAddressSquema, FormUpdateAddressValues } from "../../models/schemas/address.schema.model";
+import { FormUpdateBasicUserInfoValues } from "../../models/schemas/updateBasicUserInfo.schema.model";
+import { FormAddAddressValues, FormUpdateAddressValues } from "../../models/schemas/address.schema.model";
 import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
-import { updateProfilePasswordSchema, FormUpdateProfilePassword } from "../../models/schemas/profileUpdatePassword.schema";
-import { updatePhoneSchema, FormUpdatePhone } from "../../models/schemas/phone.schema.model";
-
-
-type options = 'basicInfo' | 'phone' | 'password' | 'address';
-
-type IUserInfo = {
-    addresses: Array<IAddress>;
-    email: string;
-    isVerified: boolean;
-    lastname: string;
-    name: string;
-    phone: string | null;
-}
-
-type regionCommune = {
-    id: number;
-    name: string
-}
+import { FormUpdateProfilePassword } from "../../models/schemas/profileUpdatePassword.schema";
+import { FormUpdatePhone } from "../../models/schemas/phone.schema.model";
+import UpdateBasicInfoView from "../../components/user/updateBasicInfo/updateBasicInfo";
+import { options, IUserInfo, regionCommune } from "../../models/types/profileUser.model";
+import UpdatePhone from "../../components/user/updatePhone/updatePhone";
+import UpdatePassword from "../../components/user/updatePassword/updatePassword";
+import MainAddress from "../../components/user/addressLogic/mainAddress";
+import CardInfo from "../../components/cardInfo/cardInfo";
 
 type responseModal = {
     title: string;
@@ -51,20 +38,13 @@ interface ISectionToUpdate {
     address: boolean;
 }
 
-interface IAddress {
-    id: string;
-    street: string;
-    number: number;
-    numDpto: number;
-    postalCode: string;
-    commune: {id: number, name: string};
-}
+
 
 const Profile = () => {
     const { api } = UseAxiosContext();
     const { showModal, hideModal, modalIsOpen } = useModal();
     const [ addressCount, setAddressCount ] = useState<number>(0);
-    const [ addressToEdit, setAddressToEdit ] = useState<Array<number>>([]);
+    const [ addressToEdit, setAddressToEdit ] = useState<Array<string>>([]);
     const [ textModalResult, setTextModalResult ] = useState<responseModal | null>(null);
     const [showForm, setShowForm] = useState<ISectionToUpdate>({
         basicInfo: false,
@@ -234,6 +214,7 @@ const Profile = () => {
             // FIXME the backend must return the address added to avoid this bellow.
             callUserInfo();
             setShowForm(prev => ({...prev, address: false}));
+            setAddressToEdit(prev => prev.filter(el => el !== data.idAddress));
             setTextModalResult({
                 title: 'Result updating address',
                 body: result.data.message
@@ -325,15 +306,17 @@ const Profile = () => {
         )
     }
 
-    if (userInfoError) {
+    if (userInfoError || allCommuneError) {
         return (
-            <h1>ERROR LOADING USER INFO {userInfoError.status} {userInfoError.error}</h1>
-        )
-    }
+            <section className="flex flex-col gap-3 mx-auto p-2 my-3">
+                <Text text="Profile" color="black" size="3xl" typeText="h1"/>
 
-    if (allCommuneError) {
-        return (
-            <h1>ERROR LOADING all communes</h1>
+                <CardInfo 
+                    header = {<Text text='Error loading data' color="black" size="3xl" typeText="p"/>}
+                    body = {<Text text='Please try again later.' color="black" size="base" typeText="em"/>}
+                    typeCard={2}
+                />
+            </section> 
         )
     }
 
@@ -393,413 +376,58 @@ const Profile = () => {
                 </div>
                 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 max-w-[1300px]">
-                    <div className="flex flex-col gap-6">
-                        <div className="flex gap-6">
-                            { UpdateBasicInfoIsLoading ? (<Loader isFullScreen = {false} text="Updating values" />) : (
-                                <CardInfo 
-                                    header = {
-                                        <div className="flex gap-3 justify-between">
-                                            <Text text="Basic information" color="black" size="2xl" typeText="strong"/>
-                                            <div className="max-w-[100px] max-h-[30px]">
-                                                <Button typeBtn="button"  typeStyleBtn={showForm.basicInfo ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("basicInfo")} textBtn={showForm.basicInfo ? 'Cancel' : 'Update'} disabled = {errorUpdateBasicInfo && errorUpdateBasicInfo.status === 403 ? true : false } />
-                                            </div>
-                                        </div>
-                                    }
-                                    body = {
-                                        showForm.basicInfo ? (
-                                            <div className="flex flex-col gap-2">
-                                                <Form
-                                                    mode="all"
-                                                    schema={updateBasicUserInfoSchema}
-                                                    onSubmit={updateBasicInfoUser}
-                                                    defaultValues={userInfo ? {name: userInfo.name, lastName: userInfo.lastname} : {name: '', lastName: ''}}
-                                                    errorSubmit={errorUpdateBasicInfo}
-                                                    fields={[
-                                                        {
-                                                            name: 'name',
-                                                            label: 'New name',
-                                                            type: 'text',
-                                                            placeholder: 'Insert new name'
-                                                        },
-                                                        {
-                                                            name: 'lastName',
-                                                            label: 'New lastname',
-                                                            type: 'text',
-                                                            placeholder: 'Insert new lastname'
-                                                        }
-                                                    ]}
-                                                    gridCols={2}
-                                                    styleForm="primary"
-                                                />
-                                                <div className="flex items-baseline gap-2 bg-gray-lighter border-4">
-                                                    <div className="border-r-4 p-1 bg-gray max-w-[105px] w-full"> 
-                                                        <Text text="Email: " color="white" size="lg" typeText="strong"/>
-                                                    </div>
-                                                    <Text text={userInfo ? userInfo.email : 'Error loading data'} color="black" size="base" typeText="p"/>
-                                                </div>
-
-                                                <div className="flex items-baseline gap-2 bg-gray-lighter border-4">
-                                                    <div className="border-r-4 p-1 bg-gray max-w-[105px] w-full"> 
-                                                        <Text text="Verified?: " color="white" size="lg" typeText="strong"/>
-                                                    </div>
-                                                    
-                                                    <Text text={userInfo ? userInfo.isVerified ? 'Yes' : 'No' : 'Error loading data'} color="black" size="base" typeText="p"/>
-                                                </div>
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col gap-1">       
-                                                <div className="flex gap-3">
-                                                    <div className="flex items-baseline gap-2 bg-yellow border-4 w-full">
-                                                        <div className="border-r-4 p-1 bg-yellow-darker max-w-[105px] w-full">
-                                                            <Text text="Name" color="black" size="lg" typeText="strong"/>
-                                                        </div>
-                                                    
-                                                        <Text text={userInfo ? userInfo.name : 'Error loading data'} color="black" size="base" typeText="p"/>
-                                                    </div>
-
-                                                    <div className="flex items-baseline gap-2 bg-yellow border-4 w-full">
-                                                        <div className="border-r-4 p-1 bg-yellow-darker max-w-[105px] w-full"> 
-                                                            <Text text="Lastname: " color="black" size="lg" typeText="strong"/>
-                                                        </div>
-                                                        
-                                                        <Text text={userInfo ? userInfo.lastname : 'Error loading data'} color="black" size="base" typeText="p"/>
-                                                    </div>
-                                                </div>                                        
-                                                
-
-                                                <div className="flex items-baseline gap-2 bg-yellow border-4">
-                                                    <div className="border-r-4 p-1 bg-yellow-darker max-w-[105px] w-full"> 
-                                                        <Text text="Email: " color="black" size="lg" typeText="strong"/>
-                                                    </div>
-                                                    <Text text={userInfo ? userInfo.email : 'Error loading data'} color="black" size="base" typeText="p"/>
-                                                </div>
-
-                                                <div className="flex items-baseline gap-2 bg-yellow border-4">
-                                                    <div className="border-r-4 p-1 bg-yellow-darker max-w-[105px] w-full"> 
-                                                        <Text text="Verified?: " color="black" size="lg" typeText="strong"/>
-                                                    </div>
-                                                    
-                                                    <Text text={userInfo ? userInfo.isVerified ? 'Yes' : 'No' : 'Error loading data'} color="black" size="base" typeText="p"/>
-                                                </div>
-                                            </div>
-                                        )
-                                    }
-                                    typeCard={showForm.basicInfo ? 5 : 1}
-                                />
-                            )}
-                            
-                            { updatePhoneIsLoading ? (<Loader isFullScreen = {false} text="Updating phone" />) : (
-                                <CardInfo 
-                                    header = {
-                                        <div className="flex gap-3 justify-between">
-                                            <Text text="Phone" color="black" size="2xl" typeText="strong"/>
-                                            <div className="max-w-[100px] max-h-[30px]">
-                                                <Button typeBtn="button"  typeStyleBtn={showForm.phone ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("phone")} textBtn={showForm.phone ? 'Cancel' : 'Update'} />
-                                            </div>
-                                        </div>
-                                    }
-                                    body = {
-                                        showForm.phone ? (
-                                            <div className="flex flex-col gap-2">
-                                                <Form
-                                                    mode="all"
-                                                    schema={updatePhoneSchema}
-                                                    onSubmit={updatePhone}
-                                                    defaultValues={userInfo?.phone ? {phone: userInfo.phone} : {phone: ''}}
-                                                    errorSubmit={errorUpdatePhone}
-                                                    fields={[
-                                                        {
-                                                            name: 'phone',
-                                                            label: 'Phone',
-                                                            type: 'text',
-                                                            placeholder: 'Insert your phone number'
-                                                        },
-                                                    ]}
-                                                    gridCols={1}
-                                                    styleForm="primary"
-                                                />
-                                            </div>
-                                        ) : (
-                                            <div className="flex items-baseline gap-2 bg-yellow border-4 w-full">
-                                                <div className="border-r-4 p-1 bg-yellow-darker max-w-[105px] w-full">
-                                                    <Text text="Phone: " color="black" size="lg" typeText="strong"/>
-                                                </div>
-                                                    
-                                                <Text text={userInfo ? userInfo.phone ? userInfo.phone : 'No phone added' : 'Error loading data'} color="black" size="base" typeText="p"/>
-                                            </div>
-                                        )
-                                    }
-                                    typeCard={showForm.phone ? 5 : 1}
-                                />
-                            )}
-                        </div>
-                        
-                        <div>
-                            { updatePasswordIsLoading ? (<Loader isFullScreen = {false} text="Updating password" />) : (
-                                <CardInfo 
-                                    header = {
-                                        <div className="flex gap-3 justify-between">
-                                            <Text text="Update password" color="black" size="2xl" typeText="strong"/>
-                                            <div className="max-w-[100px] max-h-[30px]">
-                                                <Button typeBtn="button"  typeStyleBtn={showForm.password ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("password")} textBtn={showForm.password ? 'Cancel' : 'Update'} />
-                                            </div>
-                                        </div>
-                                    }
-                                    body = {
-                                        showForm.password && (
-                                            <div className="flex flex-col gap-2">
-                                                <Form
-                                                    mode="all"
-                                                    schema={updateProfilePasswordSchema}
-                                                    onSubmit={updateProfilePassword}
-                                                    defaultValues={{oldPassword: '', confirmNewPassword: '', newPassword: '' }}
-                                                    errorSubmit={errorUpdatePassword}
-                                                    fields={[
-                                                        {
-                                                            name: 'oldPassword',
-                                                            label: 'Old password',
-                                                            type: 'password',
-                                                            placeholder: 'Insert old password'
-                                                        },
-                                                        {
-                                                            name: 'newPassword',
-                                                            label: 'New password',
-                                                            type: 'password',
-                                                            placeholder: 'Insert new password'
-                                                        },
-                                                        {
-                                                            name: 'confirmNewPassword',
-                                                            label: 'Confirm new password',
-                                                            type: 'password',
-                                                            placeholder: 'Insert confirm new password'
-                                                        }
-                                                    ]}
-                                                    gridCols={1}
-                                                    styleForm="primary"
-                                                />
-                                            </div>
-                                        )
-                                    }
-                                    typeCard={showForm.password ? 5 : 1}
-                                />
-                            )}
-                        </div>
-                    </div>
-
-                    <div>
-                        {deleteAddressIsLoading && (<Loader text="Deleting address"/>)}
-                        {addAddressIsLoading ? (<Loader text="Adding a new address" isFullScreen = {false} />) : (
-                            <CardInfo 
-                                header = {
-                                    <div className="flex gap-3 justify-between">
-                                        <Text text="Addresses" color="black" size="2xl" typeText="strong"/>
-                                        <Text text={`${addressCount}/3`} color="black" size="2xl" typeText="strong"/>
-                                        <div className="max-w-[100px] max-h-[30px]">
-                                            <Button typeBtn="button" typeStyleBtn={showForm.address ? 'primary-red' : addressCount >= 3 ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("address")} disabled = {addressCount >= 3} textBtn={showForm.address ? 'Cancel' : 'Add'} />
-                                        </div>
-                                    </div> 
-                                }
-                                body = {
-                                    showForm.address ? (
-                                        <div className="flex flex-col gap-3">
-                                            <Form
-                                                mode="all"
-                                                schema={addressSquema}
-                                                onSubmit={addAddress}
-                                                defaultValues={{idCommune: 0, number: '1', postalCode: '', street: '', numDpto: ''}}
-                                                errorSubmit={errorAddAddress}
-                                                fields={[
-                                                    {
-                                                        type: 'select',
-                                                        label: 'Commune',
-                                                        name: 'idCommune',
-                                                        options: commune ? [{label: '------', value: 0}, ...commune.map(el => ({label: el.name, value: el.id, selected: false })) ] : []
-                                                    },
-                                                    {
-                                                        type: 'number',
-                                                        label: 'House number',
-                                                        name: 'number',
-                                                        inputStyle: 'primary',
-                                                        placeholder: 'Insert number',
-                                                        min: 1
-                                                    },
-                                                    {
-                                                        type: 'text',
-                                                        label: 'Postal code',
-                                                        name: 'postalCode',
-                                                        inputStyle: 'primary',
-                                                        placeholder: 'Insert postal code'
-                                                    },
-                                                    {
-                                                        type: 'text',
-                                                        label: 'Street',
-                                                        name: 'street',
-                                                        inputStyle: 'primary',
-                                                        placeholder: 'Insert street'
-                                                    },
-                                                    {
-                                                        type: 'number',
-                                                        label: 'Num dpto',
-                                                        name: 'numDpto',
-                                                        inputStyle: 'primary',
-                                                        placeholder: 'Insert Num dpto',
-                                                        min: 1
-                                                    }
-                                                ]}
-                                                gridCols={1}
-                                                styleForm="primary"
-                                            />
-
-                                            <div className="flex flex-col gap-1">
-                                                {responseUserInfo?.data.user.addresses.map((el, index) => (
-                                                    <div key = {index}>
-                                                        {JSON.stringify(el)}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        
-                                    ) : (
-                                        <div className="flex flex-col gap-3">
-                                            {updateAddressIsLoading && <Loader text="Updating address" isFullScreen = {false} />}
-                                            {responseUserInfo?.data.user.addresses.map((el, index) => {
-                                                if(addressToEdit.some(edit => edit === index)) {
-                                                    return (
-                                                        <div key={index}>
-                                                            <Form
-                                                                mode="all"
-                                                                schema={updateAddressSquema}
-                                                                onSubmit={updateAddress}
-                                                                defaultValues={{idAddress: el.id, idCommune: el.commune.id, number: `${el.number}`, postalCode: `${el.postalCode}`, street: el.street, numDpto: `${el.numDpto}`}}
-                                                                errorSubmit={errorUpdateAddress}
-                                                                fields={[
-                                                                    {
-                                                                        type: 'select',
-                                                                        label: 'Commune',
-                                                                        name: 'idCommune',
-                                                                        options: commune ? [{label: '------', value: 0}, ...commune.map(el => ({label: el.name, value: el.id})) ] : []
-                                                                    },
-                                                                    {
-                                                                        type: 'number',
-                                                                        label: 'House number',
-                                                                        name: 'number',
-                                                                        inputStyle: 'primary',
-                                                                        placeholder: 'Insert number',
-                                                                        min: 1
-                                                                    },
-                                                                    {
-                                                                        type: 'text',
-                                                                        label: 'Postal code',
-                                                                        name: 'postalCode',
-                                                                        inputStyle: 'primary',
-                                                                        placeholder: 'Insert postal code'
-                                                                    },
-                                                                    {
-                                                                        type: 'text',
-                                                                        label: 'Street',
-                                                                        name: 'street',
-                                                                        inputStyle: 'primary',
-                                                                        placeholder: 'Insert street'
-                                                                    },
-                                                                    {
-                                                                        type: 'number',
-                                                                        label: 'Num dpto',
-                                                                        name: 'numDpto',
-                                                                        inputStyle: 'primary',
-                                                                        placeholder: 'Insert Num dpto',
-                                                                        min: 1
-                                                                    }
-                                                                ]}
-                                                                gridCols={1}
-                                                                styleForm="primary"
-                                                            />
-                                                            <Button 
-                                                                typeBtn="button" 
-                                                                typeStyleBtn="primary-red" 
-                                                                onClickBtn={() => {
-                                                                    setAddressToEdit(prev => prev.filter(el => el !== index));
-                                                                    setErrorUpdateAddress(null);
-                                                                }}
-                                                                textBtn="Cancel"
-                                                            />
-                                                        </div>
-                                                    )
-                                                } else {
-                                                    return (
-                                                        <div key = {index} className={`flex gap-2 ${index}`}>
-                                                            <Modal 
-                                                                header = {<Text text="Are you shure?" color="black" size="2xl" typeText="strong"/>}
-                                                                body = {
-                                                                    <div className="flex flex-col gap-2">
-                                                                        <Text text="To delete this address?" color="black" size="base" typeText="em"/>
-                                                                        <div className="flex gap-3">
-                                                                            <Button 
-                                                                                typeBtn="button" 
-                                                                                typeStyleBtn="primary-green" 
-                                                                                onClickBtn={() => {
-                                                                                    hideModal();
-                                                                                    deleteAddress(el.id)
-                                                                                }} 
-                                                                                textBtn="Yes" 
-                                                                            />
-
-                                                                            <Button 
-                                                                                typeBtn="button" 
-                                                                                typeStyleBtn="primary-red" 
-                                                                                onClickBtn={hideModal} 
-                                                                                textBtn="No" 
-                                                                            />
-                                                                        </div>
-                                                                    </div>
-                                                                }
-                                                                hideModal={hideModal}
-                                                                isOpen = {modalIsOpen(`delete${el.id}`)}
-                                                            />
-
-                                                            <div className="flex flex-col w-full">
-                                                                <div className="border-4 bg-yellow p-1">
-                                                                    <Text color="black" size="base" text={el.commune.name} typeText="strong"/>
-                                                                </div>
-
-                                                                <div className="border-b-4 border-l-4 border-r-4 bg-yellow p-1">
-                                                                    <div className="flex gap-1">
-                                                                        <Text color="black" size="base" text='Street: ' typeText="strong"/>
-                                                                        <Text color="black" size="base" text={`${el.street} ${el.number} #${el.numDpto}`} typeText="p"/>
-                                                                    </div>
-
-                                                                    <div className="flex gap-1">
-                                                                        <Text color="black" size="base" text='Postal code: ' typeText="strong"/>
-                                                                        <Text color="black" size="base" text={el.postalCode} typeText="p"/>
-                                                                    </div>
-                                                                </div>
-                                                            </div>
-                                                            <div className="flex flex-col gap-3 py-1">
-                                                                <Button 
-                                                                    typeBtn="button" 
-                                                                    typeStyleBtn="primary-yellow" 
-                                                                    onClickBtn={() => setAddressToEdit(prev => [...prev, index])}
-                                                                    textBtn="Edit" 
-                                                                />
-                                                                <Button 
-                                                                    typeBtn="button" 
-                                                                    typeStyleBtn="primary-red" 
-                                                                    onClickBtn={() => showModal(`delete${el.id}`)} 
-                                                                    textBtn="Delete" 
-                                                                />
-                                                            </div>
-                                                        </div>
-                                                    )
-                                                }
-                                            })}
-                                        </div>
-                                    )
-                                }
-                                typeCard={showForm.address ? 5 : 1}
+                    <div className="flex flex-col gap-6">                        
+                        { UpdateBasicInfoIsLoading ? (<Loader isFullScreen = {false} text="Updating values" />) : (
+                            <UpdateBasicInfoView 
+                                userInfo={userInfo}
+                                changeStatusForm={changeStatusForm}
+                                errorUpdateBasicInfo={errorUpdateBasicInfo}
+                                isActive = {showForm.basicInfo}
+                                submitUpdateBasicInfoUser={updateBasicInfoUser} 
                             />
                         )}
+                            
+                        { updatePhoneIsLoading ? (<Loader isFullScreen = {false} text="Updating phone" />) : (
+                            <UpdatePhone 
+                                userInfo={userInfo}
+                                changeStatusForm={changeStatusForm}
+                                errorUpdatePhone={errorUpdatePhone}
+                                isActive = {showForm.phone}
+                                submitUpdatePhoner={updatePhone}
+                            />
+                        )}                        
+                        
+                        { updatePasswordIsLoading ? (<Loader isFullScreen = {false} text="Updating password" />) : (
+                            <UpdatePassword 
+                                changeStatusForm={changeStatusForm}
+                                errorUpdatePassword={errorUpdatePassword}
+                                isActive = {showForm.password}
+                                submitUpdatePassword={updateProfilePassword}
+                            />
+                        )} 
                     </div>
+
+                    
+                    {deleteAddressIsLoading && (<Loader text="Deleting address"/>)}
+                    {addAddressIsLoading ? (<Loader text="Adding a new address" isFullScreen = {false} />) : (
+                        <MainAddress 
+                            userInfo={userInfo}
+                            addressCount={addressCount}
+                            addressToEdit={addressToEdit}
+                            changeStatusForm={changeStatusForm}
+                            commune={commune}
+                            deleteAddress={deleteAddress}
+                            errorAddAddress={errorAddAddress}
+                            errorUpdateAddress={errorUpdateAddress}
+                            isActive={showForm.address}
+                            setAddressToEdit={setAddressToEdit}
+                            setErrorUpdateAddress={setErrorUpdateAddress}
+                            submitAddAddress={addAddress}
+                            submitUpdateAddres={updateAddress}
+                            updateAddressIsLoading={updateAddressIsLoading}
+                        />
+                    )} 
                 </div>
-                
             </section>
         </>
     )
