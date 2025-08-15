@@ -6,7 +6,7 @@ import { IUserProps } from "../models/types/user.model.ts";
 import useApi from "../hooks/useApi.ts";
 import { AxiosResponse } from "axios";
 import { useNavigate } from "react-router-dom";
-import { IErrorApi } from "../models/types/api.model.ts";
+import { ErrorApi, IErrorApi } from "../models/types/api.model.ts";
 
 interface IAuthActionContext {
     fetchLoginUser: (data: FormLoginValues) => Promise<void>;
@@ -66,7 +66,7 @@ export const AuthActionContextProvider = ({ children }: {children: ReactNode}) =
        
         const response = await callApi(data);
         
-        if (!response) {
+        if (response instanceof ErrorApi) {
             setUserIsLoged(false);
             setUserData(null);
             return;

@@ -8,6 +8,7 @@ import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
 import Button from "../../components/button/button";
 import { useNavigate } from "react-router-dom";
+import { ErrorApi } from "../../models/types/api.model";
 
 interface IDataRegister {
     email: string;
@@ -29,7 +30,8 @@ const Register = () => {
 
     const fetchRegister = async (data: IDataRegister) => {
         const response = await callApi(data);
-        if (response && response.data.status === 200) {
+        if(response instanceof ErrorApi) return;
+        if (response.data.status === 200) {
             showModal('registerModal');
             return;
         }

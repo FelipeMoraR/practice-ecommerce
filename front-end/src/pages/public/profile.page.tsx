@@ -11,6 +11,7 @@ import { updateBasicUserInfoSchema, FormUpdateBasicUserInfoValues } from "../../
 import { addressSquema, FormAddAddressValues, updateAddressSquema, FormUpdateAddressValues } from "../../models/schemas/address.schema.model";
 import Modal from "../../components/modal/modal";
 import useModal from "../../hooks/useModal";
+import { updateProfilePasswordSchema, FormUpdateProfilePassword } from "../../models/schemas/profileUpdatePassword.schema";
 
 type options = 'basicInfo' | 'phone' | 'password' | 'address';
 
@@ -63,7 +64,6 @@ const Profile = () => {
     const [ addressCount, setAddressCount ] = useState<number>(0);
     const [ addressToEdit, setAddressToEdit ] = useState<Array<number>>([]);
     const [ textModalResult, setTextModalResult ] = useState<responseModal | null>(null);
-    
     const [showForm, setShowForm] = useState<ISectionToUpdate>({
         basicInfo: false,
         phone: false,
@@ -107,9 +107,17 @@ const Profile = () => {
     const {
         apiIsLoading: updateAddressIsLoading,
         callApi: callUpdateAddress,
-        errorApi: errorUpdateAddress
+        errorApi: errorUpdateAddress,
+        setErrorApi: setErrorUpdateAddress
     } = useApi<IInfoRegionCommune, unknown>((data) => api.patch('/users/update-user-address', data));
     
+    const {
+        apiIsLoading: updatePasswordIsLoading,
+        callApi: callUpdatePassword,
+        errorApi: errorUpdatePassword
+    } = useApi<IApi, unknown>((data) => api.patch('/users/update-password-user', data));
+    const updatedProfilePassword = useRef<boolean>(false);
+
     const customHideModal = () => {
         hideModal();
         setTextModalResult(null);
@@ -227,6 +235,38 @@ const Profile = () => {
         }
     }
 
+    const updateProfilePassword = async (data: FormUpdateProfilePassword) => {
+        if(!updatedProfilePassword.current) {
+            showModal('updateProfilePassword');
+            return;
+        }
+        const result = await callUpdatePassword(data);
+        if(result instanceof ErrorApi){
+            setTextModalResult({
+                title: 'Error updating address',
+                body: result.error
+            });
+            showModal('resultResponse');
+            updatedProfilePassword.current = false;
+            return;
+        }
+        if(result.status === 200) {
+            callUserInfo();
+            setShowForm(prev => ({...prev, password: false}));
+            setTextModalResult({
+                title: 'Result updating password',
+                body: `${result.data.message}, redirecting...`
+            });
+            showModal('resultResponse');
+            
+            setTimeout(() => {
+                window.location.href = '/login';
+            }, 2000)
+
+            return;
+        }
+    }
+
     // NOTE To capture the entry data
     useEffect(() => {
         setUserInfo(responseUserInfo?.data.user);
@@ -241,7 +281,7 @@ const Profile = () => {
     // NOTE Controll error updating basic data user
     useEffect(() => {
         if(errorUpdateBasicInfo && errorUpdateBasicInfo.status === 403) setShowForm(prev => ({...prev, basicInfo: false}));
-    }, [errorUpdateBasicInfo])
+    }, [errorUpdateBasicInfo]);
 
     if (userInfoIsLoading || allCommuneIsLoading) {
         return (
@@ -269,7 +309,7 @@ const Profile = () => {
     return (
         <>  
             <Modal 
-                header = {<Text text="Are you shure to update this values?" color="black" size="lg" typeText="strong" />} 
+                header = {<Text text="Are you shure to update this values?" color="black" size="2xl" typeText="strong" />} 
                 body = {
                     <div className="flex flex-col gap-3">
                         <Text text="Once you update any of these parameters you will not be able to do so again for 30 days." color="black" size="base" typeText="em" />
@@ -282,6 +322,32 @@ const Profile = () => {
                 hideModal={hideModal} 
                 isOpen={modalIsOpen('updateBasicInfoModal')} 
             />
+
+            <Modal 
+                header = {<Text text="Are you shure change your password?" color="black" size="2xl" typeText="strong" />} 
+                body = {
+                    <div className="flex flex-col gap-3">
+                        <Text text="This action will log out you and close all session associate to this account" color="black" size="base" typeText="em" />
+                        <div className="flex gap-3">
+                            <Button 
+                            typeBtn="button" 
+                            typeStyleBtn="secondary-green" 
+                            onClickBtn={() => {
+                                updatedProfilePassword.current = true; 
+                                hideModal();
+                            }} 
+                            textBtn="I understand"/>
+                            <Button 
+                            typeBtn="button" 
+                            typeStyleBtn="secondary-red" 
+                            onClickBtn={hideModal} 
+                            textBtn="Discard"/>
+                        </div>
+                    </div>
+                } 
+                hideModal={hideModal} 
+                isOpen={modalIsOpen('updateProfilePassword')} 
+            />
             
             <Modal
                 header = {<Text text={textModalResult ? textModalResult.title : ''} color="black" size="lg" typeText="strong" />}
@@ -292,6 +358,7 @@ const Profile = () => {
 
             <section className="flex mx-auto p-2 my-3 gap-6">
                 <Text text="Profile" color="black" size="3xl" typeText="h1"/>
+
                 <div>
                     { UpdateBasicInfoIsLoading ? (<Loader isFullScreen = {false} text="Updating values" />) : (
                         <CardInfo 
@@ -502,7 +569,10 @@ const Profile = () => {
                                                         <Button 
                                                             typeBtn="button" 
                                                             typeStyleBtn="primary-red" 
-                                                            onClickBtn={() => setAddressToEdit(prev => prev.filter(el => el !== index))} 
+                                                            onClickBtn={() => {
+                                                                setAddressToEdit(prev => prev.filter(el => el !== index));
+                                                                setErrorUpdateAddress(null);
+                                                            }}
                                                             textBtn="Cancel"
                                                         />
                                                     </div>
@@ -543,7 +613,7 @@ const Profile = () => {
                                                             <Button 
                                                                 typeBtn="button" 
                                                                 typeStyleBtn="primary-yellow" 
-                                                                onClickBtn={() => setAddressToEdit(prev => [...prev, index])} 
+                                                                onClickBtn={() => setAddressToEdit(prev => [...prev, index])}
                                                                 textBtn="Edit" 
                                                             />
                                                             <Button 
@@ -557,6 +627,57 @@ const Profile = () => {
                                                 )
                                             }
                                         })}
+                                    </div>
+                                )
+                            }
+                            typeCard={1}
+                        />
+                    )}
+                </div>
+
+                <div>
+                    { updatePasswordIsLoading ? (<Loader isFullScreen = {false} text="Updating password" />) : (
+                        <CardInfo 
+                            header = {
+                                <div className="flex gap-3 justify-between">
+                                    <Text text="Update password" color="black" size="2xl" typeText="strong"/>
+                                    <div className="max-w-[100px]">
+                                        <Button typeBtn="button"  typeStyleBtn={showForm.password ? 'primary-red' : 'primary-green'} onClickBtn={() => changeStatusForm("password")} textBtn={showForm.password ? 'Cancel' : 'Update'} />
+                                    </div>
+                                </div>
+                            }
+                            body = {
+                                showForm.password && (
+                                    <div className="flex flex-col gap-2">
+                                        <Form
+                                            mode="all"
+                                            schema={updateProfilePasswordSchema}
+                                            onSubmit={updateProfilePassword}
+                                            defaultValues={{oldPassword: '', confirmNewPassword: '', newPassword: '' }}
+                                            errorSubmit={errorUpdatePassword}
+                                            fields={[
+                                                {
+                                                    name: 'oldPassword',
+                                                    label: 'Old password',
+                                                    type: 'password',
+                                                    placeholder: 'Insert old password'
+                                                },
+                                                {
+                                                    name: 'newPassword',
+                                                    label: 'New password',
+                                                    type: 'password',
+                                                    placeholder: 'Insert new password'
+                                                },
+                                                {
+                                                    name: 'confirmNewPassword',
+                                                    label: 'Confirm new password',
+                                                    type: 'password',
+                                                    placeholder: 'Insert confirm new password'
+                                                }
+                                            ]}
+                                            gridCols={1}
+                                            styleForm="primary"
+                                        />
                                     </div>
                                 )
                             }
